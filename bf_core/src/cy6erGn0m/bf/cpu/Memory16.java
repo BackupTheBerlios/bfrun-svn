@@ -147,26 +147,21 @@ public class Memory16 implements BfMemory {
     }
     
     public void forward( int delta ) {
-        if( delta != 0 ) {
-            if( delta < 0 )
-                backward( -delta );
-            else {
-                currentUnit.data[ currentOffset ] = currentValue;
-                int newOffset = currentOffset + delta;
-                int sz;
-                while( newOffset >= ( sz = currentUnit.getSize() ) ) {
-                    newOffset -= sz;
-                    currentBase += sz;
-                    if( ++currentVectorIndex >= units.size() )
-                        units.add( currentUnit = allocNext() );
-                    else
-                        currentUnit = units.get( currentVectorIndex );
-                }
-                currentOffset = newOffset;
-                currentAddress += delta;
-                currentNonZero = ( ( currentValue = currentUnit.data[ currentOffset ] ) != 0 );
-            }
+        assert delta > 0;
+        currentUnit.data[ currentOffset ] = currentValue;
+        int newOffset = currentOffset + delta;
+        int sz;
+        while( newOffset >= ( sz = currentUnit.getSize() ) ) {
+            newOffset -= sz;
+            currentBase += sz;
+            if( ++currentVectorIndex >= units.size() )
+                units.add( currentUnit = allocNext() );
+            else
+                currentUnit = units.get( currentVectorIndex );
         }
+        currentOffset = newOffset;
+        currentAddress += delta;
+        currentNonZero = ( ( currentValue = currentUnit.data[ currentOffset ] ) != 0 );
     }
     
     public void forward1() {
@@ -187,24 +182,19 @@ public class Memory16 implements BfMemory {
     }
     
     public void backward( int delta ) {
-        if( delta != 0 ) {
-            if( delta < 0 )
-                forward( -delta );
-            else {
-                if( delta > currentAddress )
-                    throw new IndexOutOfBoundsException( "current address is negative. aborting" );
-                currentUnit.data[ currentOffset ] = currentValue;
-                int newOffset = currentOffset - delta;
-                int sz;
-                while( newOffset < 0 ) {
-                    newOffset += ( sz = ( currentUnit = units.get( --currentVectorIndex ) ).getSize() );
-                    currentBase -= sz;
-                }
-                currentOffset = newOffset;
-                currentAddress -= delta;
-                currentNonZero = ( ( currentValue = currentUnit.data[ currentOffset ] ) != 0 );
-            }
+        assert delta > 0;
+        if( delta > currentAddress )
+            throw new IndexOutOfBoundsException( "current address is negative. aborting" );
+        currentUnit.data[ currentOffset ] = currentValue;
+        int newOffset = currentOffset - delta;
+        int sz;
+        while( newOffset < 0 ) {
+            newOffset += ( sz = ( currentUnit = units.get( --currentVectorIndex ) ).getSize() );
+            currentBase -= sz;
         }
+        currentOffset = newOffset;
+        currentAddress -= delta;
+        currentNonZero = ( ( currentValue = currentUnit.data[ currentOffset ] ) != 0 );
     }
     
     public void backward1() {
@@ -271,7 +261,10 @@ public class Memory16 implements BfMemory {
             increase();
         else {
             State st = saveState();
-            forward(delta);
+            if( delta > 0 )
+                forward(delta);
+            else
+                backward(-delta);
             delta( v );
             restoreState(st);
         }
@@ -280,10 +273,20 @@ public class Memory16 implements BfMemory {
     public void increaseAt ( int[] deltas, int[] values ) {
         final int v = currentValue;
         State st = saveState();
-        int current = 0;
-        for( int i = 0, m = deltas.length; i < m; ++i ) {
-            forward( deltas[ i ] - current );
-            current = deltas[ i ];
+        int current = deltas[0];
+        if( current > 0 )
+            forward( current );
+        else
+            backward( -current );
+        delta( values[0] * v );
+        for ( int i = 1, m = deltas.length; i < m; ++i ) {
+            final int cdelta = deltas[i];
+            final int jmp;
+            if( (jmp = cdelta - current) > 0 )
+                forward( jmp );
+            else
+                backward( -jmp );
+            current = cdelta;
             delta( values[i] * v );
         }
         restoreState(st);

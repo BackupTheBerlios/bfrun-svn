@@ -25,7 +25,7 @@ import cy6erGn0m.bf.iset.InstructionSet;
 import java.util.Collection;
 import java.util.EmptyStackException;
 import java.util.Stack;
-import java.util.Vector;
+import java.util.ArrayList;
 
 /**
  *
@@ -42,8 +42,8 @@ public class OptimizedCompiller implements Compiller {
     int count = 0;
     int approx_src = 0;
 
-    private Vector<Instruction> pass1 ( Vector<Instruction> input ) {
-        Vector<Instruction> result = new Vector<Instruction>( input.size() );
+    private ArrayList<Instruction> pass1 ( ArrayList<Instruction> input ) {
+        ArrayList<Instruction> result = new ArrayList<Instruction>( input.size() );
         if ( input.size() > 0 ) {
             int value = 0;
             int source = input.get( 0 ).sourceIndex;
@@ -71,8 +71,8 @@ public class OptimizedCompiller implements Compiller {
         return result;
     }
 
-    private Vector<Instruction> pass2 ( Vector<Instruction> input ) {
-        Vector<Instruction> result = new Vector<Instruction>( input.size() );
+    private ArrayList<Instruction> pass2 ( ArrayList<Instruction> input ) {
+        ArrayList<Instruction> result = new ArrayList<Instruction>( input.size() );
         if ( input.size() > 0 ) {
             int value = 0;
             int source = input.get( 0 ).sourceIndex;
@@ -101,10 +101,10 @@ public class OptimizedCompiller implements Compiller {
     }
 
     @SuppressWarnings("fallthrough")
-    private Vector<Instruction> pass3 ( Vector<Instruction> input ) {
-        Vector<Instruction> result = new Vector<Instruction>( input.size() );
+    private ArrayList<Instruction> pass3 ( ArrayList<Instruction> input ) {
+        ArrayList<Instruction> result = new ArrayList<Instruction>( input.size() );
         if ( input.size() > 0 ) {
-            Vector<Instruction> buffer = new Vector<Instruction>( 4 );
+            ArrayList<Instruction> buffer = new ArrayList<Instruction>( 4 );
             int source = input.get( 0 ).sourceIndex;
             boolean buffering = false;
             zero_find:
@@ -152,14 +152,14 @@ public class OptimizedCompiller implements Compiller {
         if ( optimizationLevel == 0 )
             return ( new SimpleCompiller() ).compile( chars );
 
-        Vector<Instruction> compiled = new Vector<Instruction>( chars.length );
+        ArrayList<Instruction> compiled = new ArrayList<Instruction>( chars.length );
         for ( int j = 0; j < chars.length; ++j ) {
             InstructionSet is = InstructionSet.forCode( chars[j] );
             if ( is != null )
                 compiled.add( new Instruction( is, 0, j ) );
         }
 
-        Vector<Instruction> optimized = compiled;
+        ArrayList<Instruction> optimized = compiled;
 
         if ( optimizationLevel > 0 ) {
             optimized = pass1( optimized );
@@ -193,9 +193,9 @@ public class OptimizedCompiller implements Compiller {
     }
 
     @SuppressWarnings("fallthrough")
-    private static Vector<Instruction> data_move_optimization ( Vector<Instruction> code ) {
-        Vector<Instruction> result = new Vector<Instruction>( code.size() );
-        Vector<Instruction> buffer = new Vector<Instruction>( 10 );
+    private static ArrayList<Instruction> data_move_optimization ( ArrayList<Instruction> code ) {
+        ArrayList<Instruction> result = new ArrayList<Instruction>( code.size() );
+        ArrayList<Instruction> buffer = new ArrayList<Instruction>( 10 );
         boolean isInLoop = false;
 
         // find stupid move
@@ -320,11 +320,11 @@ public class OptimizedCompiller implements Compiller {
         toBeFlushed.clear();
     }
 
-    private Vector<Instruction> calcJumps ( Vector<Instruction> compiled )
+    private ArrayList<Instruction> calcJumps ( ArrayList<Instruction> compiled )
             throws CompillingException {
         try {
             final int m = compiled.size();
-            Vector<Instruction> result = new Vector<Instruction>( m + 1 );
+            ArrayList<Instruction> result = new ArrayList<Instruction>( m + 1 );
             Stack<Integer> stack = new Stack<Integer>();
             for ( int i = 0; i < m; i++ ) {
                 Instruction ins = compiled.get( i );

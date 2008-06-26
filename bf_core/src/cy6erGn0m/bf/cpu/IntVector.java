@@ -25,17 +25,18 @@ package cy6erGn0m.bf.cpu;
  */
 public class IntVector {
 
-    protected int[] data = new int[ 10 ];
-    protected int ptr = 0;
+    private int[] data;
+    private int ptr = 0;
 
     public IntVector () {
+        this(10);
     }
 
     public IntVector ( int size ) {
         data = new int[ size ];
     }
 
-    public synchronized void ensureCapacity ( int capacity ) {
+    private void ensureCapacity ( int capacity ) {
         if ( data.length < capacity ) {
             int[] aData = new int[ capacity + 10 ];
             System.arraycopy( data, 0, aData, 0, data.length );
@@ -54,16 +55,17 @@ public class IntVector {
         return ptr;
     }
 
-    public synchronized int[] toArray () {
-        int[] result = new int[ ptr ];
-        System.arraycopy( data, 0, result, 0, ptr );
+    public int[] toArray () {
+        final int sz = ptr;
+        int[] result = new int[ sz ];
+        System.arraycopy( data, 0, result, 0, sz );
         return result;
     }
     
     public synchronized void clear() {
         ptr = 0;
     }
-    
+
     public int at( int index ) {
         if( index >= ptr )
             throw new IndexOutOfBoundsException();

@@ -19,7 +19,7 @@
  ***************************************************************************/
 package cy6erGn0m.bf.cpu;
 
-import java.util.Vector;
+import java.util.ArrayList;
 
 /**
  * This is not a random access memory! Only stream access. Memory32 has not fixed
@@ -47,51 +47,47 @@ public class Memory8 implements BfMemory {
             return size;
         }
     }
-    protected static final int baseUnitSize = 16 * 1024;
-    Vector<MemoryUnit> units = new Vector<MemoryUnit>( 16 );
-    MemoryUnit currentUnit = null;
-    int currentVectorIndex = 0;
-    int currentBase = 0;
-    int currentAddress = 0;
-    int currentOffset = 0;
-    int nextUnitSize;
-    byte currentValue = 0;
-    boolean currentNonZero = false;
+    private static final int baseUnitSize = 16 * 1024;
+    private ArrayList<MemoryUnit> units = new ArrayList<MemoryUnit>( 16 );
+    private MemoryUnit currentUnit = null;
+    private int currentVectorIndex = 0;
+    private int currentBase = 0;
+    //int currentAddress = 0;
+    private int currentOffset = 0;
+    private int nextUnitSize;
+    private byte currentValue = 0;
+    private boolean currentNonZero = false;
+    private  MemoryUnit _currentUnit;
+    private int _currentVectorIndex;
+    private int _currentBase;
+    private int _currentOffset;
+    private int _nextUnitSize;
 
-    protected class State {
-
-        final MemoryUnit currentUnit;
-        public final int currentVectorIndex;
-        public final int currentBase;
-        public final int currentAddress;
-        public final int currentOffset;
-        public final int nextUnitSize;
-
-        State ( Memory8.MemoryUnit currentUnit, int currentVectorIndex,
-                int currentBase, int currentAddress, int currentOffset,
-                int nextUnitSize ) {
-            this.currentUnit = currentUnit;
-            this.currentVectorIndex = currentVectorIndex;
-            this.currentBase = currentBase;
-            this.currentAddress = currentAddress;
-            this.currentOffset = currentOffset;
-            this.nextUnitSize = nextUnitSize;
-        }
+    private void set ( Memory8.MemoryUnit currentUnit, int currentVectorIndex,
+               int currentBase, int currentOffset,
+               int nextUnitSize ) {
+        _currentUnit = currentUnit;
+        _currentVectorIndex = currentVectorIndex;
+        _currentBase = currentBase;
+        _currentOffset = currentOffset;
+        _nextUnitSize = nextUnitSize;
     }
 
-    protected State saveState () {
-        return new State( currentUnit, currentVectorIndex, currentBase, currentAddress, currentOffset, nextUnitSize );
+    private void save () {
+        _currentUnit = currentUnit;
+        _currentVectorIndex = currentVectorIndex;
+        _currentBase = currentBase;
+        _currentOffset = currentOffset;
+        _nextUnitSize = nextUnitSize;
     }
 
-    protected void restoreState ( State state ) {
-
+    private void restore () {
         currentUnit.data[currentOffset] = currentValue;
 
-        currentUnit = state.currentUnit;
-        currentVectorIndex = state.currentVectorIndex;
-        currentAddress = state.currentAddress;
-        currentBase = state.currentBase;
-        currentOffset = state.currentOffset;
+        currentUnit = _currentUnit;
+        currentVectorIndex = _currentVectorIndex;
+        currentBase = _currentBase;
+        currentOffset = _currentOffset;
         currentNonZero = ( currentValue = currentUnit.data[currentOffset] ) != 0;
     }
 
@@ -108,7 +104,7 @@ public class Memory8 implements BfMemory {
         for ( MemoryUnit u : units )
             u.teardown();
         units.clear();
-        currentAddress = currentBase = currentVectorIndex = 0;
+        currentBase = currentVectorIndex = 0;
         currentOffset = 0;
         units.add( currentUnit = allocNext() );
         currentValue = 0;
@@ -122,51 +118,31 @@ public class Memory8 implements BfMemory {
     }
 
     public void increase () {
-        if ( !currentNonZero ) {
-            currentNonZero = true;
-            ++currentValue;
-        } else
-            currentNonZero = ( ++currentValue != 0 );
+        currentNonZero = ( ++currentValue != 0 );
     }
 
     public void decrease () {
-        if ( !currentNonZero ) {
-            currentNonZero = true;
-            --currentValue;
-        } else
-            currentNonZero = ( --currentValue != 0 );
+        currentNonZero = ( --currentValue != 0 );
     }
 
     public void delta ( int delta ) {
-        byte d = (byte) delta;
-        if ( !currentNonZero ) {
-            currentValue += d;
-            currentNonZero = true;
-        } else
-            currentNonZero = ( ( currentValue += d ) != 0 );
+        currentNonZero = ( ( currentValue += delta ) != 0 );
     }
 
     public void forward ( int delta ) {
-        if ( delta != 0 ) {
-            if ( delta < 0 )
-                backward( -delta );
-            else {
-                currentUnit.data[currentOffset] = currentValue;
-                int newOffset = currentOffset + delta;
-                int sz;
-                while ( newOffset >= ( sz = currentUnit.getSize() ) ) {
-                    newOffset -= sz;
-                    currentBase += sz;
-                    if ( ++currentVectorIndex >= units.size() )
-                        units.add( currentUnit = allocNext() );
-                    else
-                        currentUnit = units.get( currentVectorIndex );
-                }
-                currentOffset = newOffset;
-                currentAddress += delta;
-                currentNonZero = ( ( currentValue = currentUnit.data[currentOffset] ) != 0 );
-            }
+        assert delta > 0;
+        currentUnit.data[currentOffset] = currentValue;
+        int newOffset = currentOffset + delta;
+        int sz;
+        while ( newOffset >= ( sz = currentUnit.getSize() ) ) {
+            newOffset -= sz;
+            currentBase += sz;
+            if ( ++currentVectorIndex >= units.size() )
+                units.add( currentUnit = allocNext() );
+            else
+                currentUnit = units.get( currentVectorIndex );
         }
+        currentNonZero = ( ( currentValue = currentUnit.data[currentOffset = newOffset] ) != 0 );
     }
 
     public void forward1 () {
@@ -181,45 +157,36 @@ public class Memory8 implements BfMemory {
             else
                 currentUnit = units.get( currentVectorIndex );
         }
-        currentOffset = newOffset;
-        currentAddress++;
-        currentNonZero = ( ( currentValue = currentUnit.data[currentOffset] ) != 0 );
+        currentNonZero = ( ( currentValue = currentUnit.data[currentOffset = newOffset] ) != 0 );
     }
 
     public void backward ( int delta ) {
-        if ( delta != 0 ) {
-            if ( delta < 0 )
-                forward( -delta );
-            else {
-                if ( delta > currentAddress )
-                    throw new IndexOutOfBoundsException( "current address is negative. aborting" );
-                currentUnit.data[currentOffset] = currentValue;
-                int newOffset = currentOffset - delta;
-                int sz;
-                while ( newOffset < 0 ) {
-                    newOffset += ( sz = ( currentUnit = units.get( --currentVectorIndex ) ).getSize() );
-                    currentBase -= sz;
-                }
-                currentOffset = newOffset;
-                currentAddress -= delta;
-                currentNonZero = ( ( currentValue = currentUnit.data[currentOffset] ) != 0 );
-            }
-        }
-    }
-
-    public void backward1 () {
-        if ( currentAddress == 0 )
-            throw new IndexOutOfBoundsException( "current address is negative. aborting" );
+        assert delta > 0;
         currentUnit.data[currentOffset] = currentValue;
-        int newOffset = currentOffset - 1;
+        int newOffset = currentOffset - delta;
         int sz;
         while ( newOffset < 0 ) {
+            if ( currentVectorIndex < 0 )
+                throw new IndexOutOfBoundsException( "current address is negative. aborting" );
             newOffset += ( sz = ( currentUnit = units.get( --currentVectorIndex ) ).getSize() );
             currentBase -= sz;
         }
-        currentOffset = newOffset;
-        currentAddress--;
-        currentNonZero = ( ( currentValue = currentUnit.data[currentOffset] ) != 0 );
+        currentNonZero = ( ( currentValue = currentUnit.data[currentOffset = newOffset] ) != 0 );
+    }
+
+    public void backward1 () {
+        int newOffset = currentOffset ;
+        currentUnit.data[newOffset--] = currentValue;
+        if ( newOffset < 0 ) {
+            if ( currentBase == 0 )
+                throw new IndexOutOfBoundsException( "current address is negative. aborting" );
+            int sz;
+            do {
+                newOffset += ( sz = ( currentUnit = units.get( --currentVectorIndex ) ).getSize() );
+                currentBase -= sz;
+            } while( newOffset < 0 );
+        }
+        currentNonZero = ( ( currentValue = currentUnit.data[currentOffset = newOffset] ) != 0 );
     }
 
     public int export () {
@@ -243,7 +210,7 @@ public class Memory8 implements BfMemory {
     }
 
     public int getAddress () {
-        return currentAddress;
+        return currentBase + currentOffset;
     }
 
     public void set ( int value ) {
@@ -265,30 +232,39 @@ public class Memory8 implements BfMemory {
 
     @Override
     public String toString () {
-        return "address is " + currentAddress + " and value is " + export();
+        return "address is " + getAddress() + " and value is " + export();
     }
 
     public void increaseAt ( int delta ) {
         final int v = currentValue;
-        if ( delta == 0 )
-            increase();
-        else {
-            State st = saveState();
-            forward( delta );
-            delta( v );
-            restoreState( st );
-        }
+        save();
+        if( delta > 0 )
+            forward(delta);
+        else
+            backward(-delta);
+        delta( v );
+        restore();
     }
 
     public void increaseAt ( int[] deltas, int[] values ) {
         final int v = currentValue;
-        State st = saveState();
-        int current = 0;
-        for ( int i = 0,  m = deltas.length; i < m; ++i ) {
-            forward( deltas[i] - current );
-            current = deltas[i];
+        save();
+        int current = deltas[0];
+        if( current > 0 )
+            forward( current );
+        else
+            backward( -current );
+        delta( values[0] * v );
+        for ( int i = 1, m = deltas.length; i < m; ++i ) {
+            final int cdelta = deltas[i];
+            final int jmp;
+            if( (jmp = cdelta - current) > 0 )
+                forward( jmp );
+            else
+                backward( -jmp );
+            current = cdelta;
             delta( values[i] * v );
         }
-        restoreState( st );
+        restore();
     }
 }

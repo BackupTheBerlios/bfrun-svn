@@ -156,6 +156,8 @@ public class Processor implements BfCpu {
                                     cp = currentInstruction.op;
                                 break;
                             case Instruction.OUT_CODE:
+                                if( interrupted )
+                                    break main;
                                 bus.out( memory.export() );
                                 break;
                             case Instruction.DEC_CODE:
@@ -184,6 +186,8 @@ public class Processor implements BfCpu {
                                 jumpForward();
                                 break;
                             case Instruction.IN_CODE:
+                                if( interrupted )
+                                    break main;
                                 memory.set( bus.in() );
                                 break;
                             default:
