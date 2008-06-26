@@ -246,6 +246,7 @@ public class Processor implements BfCpu {
                                     cp = instructions[cp].op;
                                 break;
                             case Instruction.DATA_MOVE:
+                                currentInstruction = instructions[cp];
                                 if ( currentInstruction.op != 0 )
                                     memory.increaseAt( currentInstruction.op );
                                 else
