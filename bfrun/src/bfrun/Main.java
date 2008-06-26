@@ -48,7 +48,7 @@ import java.util.TreeMap;
  */
 public class Main {
 
-    public static final String bf_version = "1.1.2";
+    public static final String bf_version = "1.1.3m1";
 
     protected static void help () {
         System.out.println( "Brainf*ck interpreter. v." + bf_version + "\n" +
@@ -249,6 +249,14 @@ public class Main {
         System.out.println( sb.toString() );
     }
 
+    private String warnUpCode = "++[-][]-><+-[-].";
+
+    private void warmUp() throws CompillingException, DebugException {
+        if( ( code = compile( warnUpCode ) ) != null )
+            perform();
+        code = null;
+    }
+    
     public void runIt ( String[] args ) throws DebugException,
                                                CompillingException {
         if ( !parseParameters( args ) )
@@ -259,6 +267,10 @@ public class Main {
             printUsage();
         else {
             correctOptions();
+
+            warmUp();
+            warmUp();
+
             String programText = fromFile( filename );
             if ( programText == null )
                 System.exit( -1 );
