@@ -19,10 +19,12 @@
  ***************************************************************************/
 package bfrun;
 
+import cy6erGn0m.bf.compiller.AltcpuCompiller;
 import cy6erGn0m.bf.compiller.Compiller;
 import cy6erGn0m.bf.compiller.CompillingException;
 import cy6erGn0m.bf.compiller.OptimizedCompiller;
 import cy6erGn0m.bf.compiller.SimpleCompiller;
+import cy6erGn0m.bf.cpu.AltProcessor;
 import cy6erGn0m.bf.cpu.BfCpu;
 import cy6erGn0m.bf.cpu.BfMemory;
 import cy6erGn0m.bf.exception.DebugException;
@@ -48,7 +50,7 @@ import java.util.TreeMap;
  */
 public class Main {
 
-    public static final String bf_version = "1.1.3m1";
+    public static final String bf_version = "1.1.3m2";
 
     protected static void help () {
         System.out.println( "Brainf*ck interpreter. v." + bf_version + "\n" +
@@ -105,8 +107,9 @@ public class Main {
                 if ( param.equals( "-no-optimize" ) )
                     noOptimize = true;
                 else if ( param.equals( "-alt-cpu" ) ) {
-                    System.err.println( "-alt-cpu option deleted." );
-                    return false;
+//                    System.err.println( "-alt-cpu option deleted." );
+//                    return false;
+                    altcpu = true;
                 } else if ( param.equals( "-8" ) )
                     bits = 8;
                 else if ( param.equals( "-16" ) )
@@ -162,6 +165,12 @@ public class Main {
 
         if ( dumpCode || printStat || doNothing )
             notRun = true;
+
+        if( altcpu ) {
+            noOptimize = false;
+            if( optimizationLevel == 0 )
+                optimizationLevel = 1;
+        }
     }
 
     protected Instruction[] compile ( String programText ) throws CompillingException {
@@ -192,9 +201,15 @@ public class Main {
     }
 
     protected BfCpu produceCPU () {
-        BfCpu cpu = new Processor( code, bus, memory );
-        if ( !altcpu )
-            ( (Processor) cpu ).setExpectOptimizedCode( !noOptimize );
+
+        BfCpu cpu;
+        if( altcpu ) {
+            cpu = new AltProcessor( memory, bus, new AltcpuCompiller().compile( code ) );
+        } else {
+            cpu = new Processor( code, bus, memory );
+            if ( !altcpu )
+                ( (Processor) cpu ).setExpectOptimizedCode( !noOptimize );
+        }
         return cpu;
     }
 
