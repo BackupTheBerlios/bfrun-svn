@@ -275,6 +275,7 @@ public class Memory32 implements BfMemory {
             delta( v );
             restoreState(st);
         }
+        zero();
     }
     
     public void increaseAt ( int[] deltas, int[] values ) {
@@ -287,5 +288,6 @@ public class Memory32 implements BfMemory {
             delta( values[i] * v );
         }
         restoreState(st);
+        zero();
     }
 }

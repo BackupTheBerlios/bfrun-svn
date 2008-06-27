@@ -111,7 +111,7 @@ public class Processor implements BfCpu {
                     memory.increaseAt( currentInstruction.op );
                 else
                     memory.increaseAt( currentInstruction.extOps, currentInstruction.extOps2 );
-                memory.zero();
+                //memory.zero();
                 break;
             case Instruction.OUT_CODE:
                 bus.out( memory.export() );

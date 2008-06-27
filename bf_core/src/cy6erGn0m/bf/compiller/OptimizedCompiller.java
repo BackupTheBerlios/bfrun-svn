@@ -170,7 +170,8 @@ public class OptimizedCompiller implements Compiller {
             
             if ( optimizationLevel > 1 ) {
                 optimized = data_move_optimization( optimized );
-                //if ( optimizationLevel > 2 )
+                if ( optimizationLevel > 2 )
+                    optimized = noSideEffectOptimization( optimized );
             }
             optimized = calcJumps(optimized);
         }
@@ -314,7 +315,53 @@ public class OptimizedCompiller implements Compiller {
         buffer.clear();
         return result;
     }
-    
+
+    private static ArrayList<Instruction> noSideEffectOptimization( ArrayList<Instruction> code ) {
+        int optimizations;
+        ArrayList<Instruction> src;
+        ArrayList<Instruction> result = code;
+        Instruction instr;
+        int deep = 0;
+        do {
+            optimizations = 0;
+            src = result;
+            // TODO: if( src.size() == 1...
+            if( src.size() > 0 ) {
+                int m = src.size() - 1;
+                result = new ArrayList<Instruction>( m + 1 );
+                main:
+                for( int i = 0;  i < m; ++i) {
+                    switch( (instr = src.get(i)).ival ) {
+                        case Instruction.ZERO_CODE:
+                        case Instruction.DEC_CODE:
+                        case Instruction.INC_CODE:
+                        case Instruction.IN_CODE:
+                        case Instruction.MODIFY_CODE:
+                            if( src.get( i + 1 ).ival == Instruction.ZERO_CODE ) {
+                                optimizations++;
+                                continue main;
+                            }
+                            break;
+                        case Instruction.JUMP_FORWARD_CODE:
+                            if( src.get( i + 1).ival == Instruction.JUMP_BACKWARD_CODE ) {
+                                ++i;
+                                optimizations++;
+                                continue main;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    result.add( instr );
+                }
+                result.add( src.get( m ) );
+                if( ++deep == 1000 )
+                    throw new IllegalStateException();
+            }
+        } while( optimizations > 0 );
+        return src;
+    }
+
     private static void flush( Collection<Instruction> big, Collection<Instruction> toBeFlushed ) {
         big.addAll( toBeFlushed );
         toBeFlushed.clear();

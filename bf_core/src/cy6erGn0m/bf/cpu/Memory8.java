@@ -81,14 +81,15 @@ public class Memory8 implements BfMemory {
         _nextUnitSize = nextUnitSize;
     }
 
-    private void restore () {
+    private void restoreZero() {
         currentUnit.data[currentOffset] = currentValue;
 
         currentUnit = _currentUnit;
         currentVectorIndex = _currentVectorIndex;
         currentBase = _currentBase;
         currentOffset = _currentOffset;
-        currentNonZero = ( currentValue = currentUnit.data[currentOffset] ) != 0;
+        currentNonZero = false;
+        currentValue = /*currentUnit.data[currentOffset] =*/  0;
     }
 
     public Memory8 () {
@@ -243,7 +244,7 @@ public class Memory8 implements BfMemory {
         else
             backward(-delta);
         delta( v );
-        restore();
+        restoreZero();
     }
 
     public void increaseAt ( int[] deltas, int[] values ) {
@@ -265,6 +266,6 @@ public class Memory8 implements BfMemory {
             current = cdelta;
             delta( values[i] * v );
         }
-        restore();
+        restoreZero();
     }
 }

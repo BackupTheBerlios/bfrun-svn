@@ -267,6 +267,7 @@ public class Memory16 implements BfMemory {
                 backward(-delta);
             delta( v );
             restoreState(st);
+            zero();
         }
     }
     
@@ -290,5 +291,6 @@ public class Memory16 implements BfMemory {
             delta( values[i] * v );
         }
         restoreState(st);
+        zero();
     }
 }

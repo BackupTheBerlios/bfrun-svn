@@ -71,4 +71,10 @@ public class IntVector {
             throw new IndexOutOfBoundsException();
         return data[ index ];
     }
+
+    public void write( int index, int value ) {
+        if( index >= ptr )
+            throw new IndexOutOfBoundsException();
+        data[ index ] = value;
+    }
 }
