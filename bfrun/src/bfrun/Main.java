@@ -25,13 +25,13 @@ import cy6erGn0m.bf.compiller.CompillingException;
 import cy6erGn0m.bf.compiller.OptimizedCompiller;
 import cy6erGn0m.bf.compiller.SimpleCompiller;
 import cy6erGn0m.bf.cpu.AltProcessor;
+import cy6erGn0m.bf.cpu.AltProcessor2;
 import cy6erGn0m.bf.cpu.BfCpu;
 import cy6erGn0m.bf.cpu.BfMemory;
 import cy6erGn0m.bf.exception.DebugException;
 import cy6erGn0m.bf.cpu.IOBus;
-import cy6erGn0m.bf.cpu.Memory16;
+import cy6erGn0m.bf.cpu.Memory16_2nd;
 import cy6erGn0m.bf.cpu.Memory32;
-import cy6erGn0m.bf.cpu.Memory8;
 import cy6erGn0m.bf.cpu.Memory8_2nd;
 import cy6erGn0m.bf.cpu.Processor;
 import cy6erGn0m.bf.iset.Instruction;
@@ -51,14 +51,17 @@ import java.util.TreeMap;
  */
 public class Main {
 
-    public static final String bf_version = "1.1.3m3";
+    public static final String bf_version = "1.1.3m6";
 
     protected static void help () {
         System.out.println( "Brainf*ck interpreter. v." + bf_version + "\n" +
                 "This is Free software: no any waranties.\n" +
                 "\nusage:\n" +
-                "java -jar bfrun.jar [-no-optimize] [-16|-32] [-O0|-O1|-O2|-O3] [-dump] [-time] [--] file\n" );
+                "java -jar bfrun.jar [-no-optimize] [-alt-cpu|-mad-cpu] [-16|-32] [-O0|-O1|-O2|-O3] [-dump] [-time] [--] file\n" );
         System.out.println( "-no-optimize\t\trun bf Pcode without optimizations" );
+        System.out.println( "-classic-cpu\t\t(default) use classic bf cpu (plain Pcode interpreter) [stable]" );
+        System.out.println( "-alt-cpu\t\tuse alternative bf cpu (plain bytecode interpreter) [experimental]" );
+        System.out.println( "-mad-cpu\t\tuse mad bf cpu (stateless bytecode interpreter) [experimental]" );
         System.out.println( "-8\t\t\t(default) use 8bit bf memory" );
         System.out.println( "-16\t\t\tuse 16bit bf memory" );
         System.out.println( "-32\t\t\tuse 32bit bf memory" );
@@ -76,7 +79,7 @@ public class Main {
         System.out.println( "Brainf*ck interpreter. v." + bf_version + "\n" +
                 "This is Free software: no any waranties.\n" +
                 "\nusage:\n" +
-                "java -jar bfrun.jar [-no-optimize] [-8|-16|-32] [-O0|-O1|-O2|-O3] [-dump] [-time] [-stat] [--] file\n" +
+                "java -jar bfrun.jar [-no-optimize] [-alt-cpu|-mad-cpu] [-16|-32] [-O0|-O1|-O2|-O3] [-dump] [-time] [-stat] [--] file\n" +
                 "or java -jar bfrun.jar -help\n" );
     }
     String filename = null;
@@ -84,6 +87,7 @@ public class Main {
     int bits = 8;
     boolean dp = false;
     boolean altcpu = false;
+    boolean madcpu = false;
     boolean checkTime = false;
     int optimizationLevel = 2;
     boolean dumpCode = false;
@@ -107,11 +111,13 @@ public class Main {
             if ( !dp && param.startsWith( "-" ) ) {
                 if ( param.equals( "-no-optimize" ) )
                     noOptimize = true;
-                else if ( param.equals( "-alt-cpu" ) ) {
-//                    System.err.println( "-alt-cpu option deleted." );
-//                    return false;
+                else if ( param.equals( "-alt-cpu" ) )
                     altcpu = true;
-                } else if ( param.equals( "-8" ) )
+                else if( param.equals( "-mad-cpu" ) )
+                    madcpu = true;
+                else if ( param.equals( "-classic-cpu" ) )
+                    altcpu = madcpu = false;
+                else if ( param.equals( "-8" ) )
                     bits = 8;
                 else if ( param.equals( "-16" ) )
                     bits = 16;
@@ -172,6 +178,12 @@ public class Main {
             if( optimizationLevel == 0 )
                 optimizationLevel = 1;
         }
+        if( madcpu ) {
+            noOptimize = false;
+            if( optimizationLevel == 0 )
+                optimizationLevel = 1;
+            altcpu = false;
+        }
     }
 
     protected Instruction[] compile ( String programText ) throws CompillingException {
@@ -187,7 +199,7 @@ public class Main {
 
     protected void setupMemory () {
         if ( bits == 16 )
-            memory = new Memory16();
+            memory = new Memory16_2nd();
         else if ( bits == 32 )
             memory = new Memory32();
         else
@@ -206,6 +218,8 @@ public class Main {
         BfCpu cpu;
         if( altcpu ) {
             cpu = new AltProcessor( memory, bus, new AltcpuCompiller().compile( code ) );
+        } else if( madcpu ) {
+            cpu = new AltProcessor2( memory, bus, new AltcpuCompiller().compile( code ) );
         } else {
             cpu = new Processor( code, bus, memory );
             if ( !altcpu )
@@ -265,7 +279,7 @@ public class Main {
         System.out.println( sb.toString() );
     }
 
-    private String warnUpCode = "++[-][]-><+-[-].";
+    private String warnUpCode = "++[-]+[]-><+-[-].";
 
     private void warmUp() throws CompillingException, DebugException {
         if( ( code = compile( warnUpCode ) ) != null )
@@ -284,6 +298,8 @@ public class Main {
         else {
             correctOptions();
 
+            warmUp();
+            warmUp();
             warmUp();
             warmUp();
 
