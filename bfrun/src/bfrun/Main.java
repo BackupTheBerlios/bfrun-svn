@@ -32,6 +32,7 @@ import cy6erGn0m.bf.cpu.IOBus;
 import cy6erGn0m.bf.cpu.Memory16;
 import cy6erGn0m.bf.cpu.Memory32;
 import cy6erGn0m.bf.cpu.Memory8;
+import cy6erGn0m.bf.cpu.Memory8_2nd;
 import cy6erGn0m.bf.cpu.Processor;
 import cy6erGn0m.bf.iset.Instruction;
 import cy6erGn0m.bf.iset.InstructionSet;
@@ -50,7 +51,7 @@ import java.util.TreeMap;
  */
 public class Main {
 
-    public static final String bf_version = "1.1.3m2";
+    public static final String bf_version = "1.1.3m3";
 
     protected static void help () {
         System.out.println( "Brainf*ck interpreter. v." + bf_version + "\n" +
@@ -190,7 +191,7 @@ public class Main {
         else if ( bits == 32 )
             memory = new Memory32();
         else
-            memory = new Memory8();
+            memory = new Memory8_2nd();
     }
 
     protected void setupBus () {
