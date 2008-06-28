@@ -99,6 +99,7 @@ public class Memory8 implements BfMemory {
     public Memory8 ( int baseSize ) {
         nextUnitSize = baseSize;
         units.add( currentUnit = allocNext() );
+        currentOffset = baseSize >> 1;
     }
 
     public void teardown () {
@@ -237,14 +238,21 @@ public class Memory8 implements BfMemory {
     }
 
     public void increaseAt ( int delta ) {
-        final int v = currentValue;
-        save();
-        if( delta > 0 )
-            forward(delta);
-        else
-            backward(-delta);
-        delta( v );
-        restoreZero();
+        int expOffs = currentOffset + delta;
+        if( expOffs >= 0 && expOffs < currentUnit.size ) {
+            currentUnit.data[ expOffs ] += currentValue;
+            currentValue = 0;
+            currentNonZero = false;
+        } else {
+            final int v = currentValue;
+            save();
+            if( delta > 0 )
+                forward(delta);
+            else
+                backward(-delta);
+            delta( v );
+            restoreZero();
+        }
     }
 
     public void increaseAt ( int[] deltas, int[] values ) {

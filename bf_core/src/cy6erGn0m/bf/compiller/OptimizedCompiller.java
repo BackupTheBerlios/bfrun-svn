@@ -349,12 +349,21 @@ public class OptimizedCompiller implements Compiller {
                                 continue main;
                             }
                             break;
+                        case Instruction.DATA_MOVE:
+                            if( src.get(i + 1).ival == Instruction.ZERO_CODE ) {
+                                ++i;
+                                optimizations++;
+                                // note: do not continue here
+                            }
+                            break;
                         default:
                             break;
                     }
                     result.add( instr );
                 }
-                result.add( src.get( m ) );
+                instr = src.get(m);
+                if( instr.ival == Instruction.OUT_CODE || instr.ival == Instruction.JUMP_BACKWARD_CODE )
+                    result.add( src.get( m ) );
                 if( ++deep == 1000 )
                     throw new IllegalStateException();
             }
