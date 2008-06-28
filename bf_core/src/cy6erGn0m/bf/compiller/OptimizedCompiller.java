@@ -349,6 +349,12 @@ public class OptimizedCompiller implements Compiller {
                                 continue main;
                             }
                             break;
+                        case Instruction.JUMP_BACKWARD_CODE:
+                            if( src.get( i + 1 ).ival == Instruction.ZERO_CODE ) {
+                                ++i;
+                                optimizations++;
+                                // note: do not continue here
+                            }
                         case Instruction.DATA_MOVE:
                             if( src.get(i + 1).ival == Instruction.ZERO_CODE ) {
                                 ++i;

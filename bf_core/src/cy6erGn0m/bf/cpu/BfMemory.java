@@ -43,4 +43,5 @@ public interface BfMemory {
     public boolean isNonZero();
     public void increaseAt( int delta );
     public void increaseAt ( int[] deltas, int[] values );
+    public void increaseAt ( int[] code, int base );
 }

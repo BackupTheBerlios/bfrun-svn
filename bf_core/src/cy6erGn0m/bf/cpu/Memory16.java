@@ -293,4 +293,16 @@ public class Memory16 implements BfMemory {
         restoreState(st);
         zero();
     }
+
+
+    public void increaseAt ( int[] code, int base ) {
+        int op = code[base++]; // size
+        int[] ops1 = new int[ op ];
+        int[] ops2 = new int[ op ];
+        for ( int i = 0; i < op; ++i ) {
+            ops1[i] = code[base++];
+            ops2[i] = code[base++];
+        }
+        increaseAt( ops1, ops2 );
+    }
 }

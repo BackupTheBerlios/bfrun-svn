@@ -9,12 +9,12 @@ package cy6erGn0m.bf.cpu;
  *
  * @author cy6ergn0m
  */
-public class Memory8_2nd implements BfMemory {
+public class Memory16_2nd implements BfMemory {
 
-    protected static final int BASE_MEMORY_SIZE = 0x8000;
+     protected static final int BASE_MEMORY_SIZE = 0x4000;
 
     private class MemoryUnit {
-        public final byte[] data;
+        public final short[] data;
 
         public final int length;
 
@@ -23,7 +23,7 @@ public class Memory8_2nd implements BfMemory {
         public MemoryUnit right = null;
 
         public MemoryUnit ( int size ) {
-            data = new byte[ length = size ];
+            data = new short[ length = size ];
         }
     }
 
@@ -33,15 +33,15 @@ public class Memory8_2nd implements BfMemory {
 
     private int currentLength;
 
-    private byte[] currentData;
+    private short[] currentData;
 
     private int currentOffset;
 
-    public Memory8_2nd () {
+    public Memory16_2nd () {
         this(BASE_MEMORY_SIZE);
     }
 
-    public Memory8_2nd ( int size ) {
+    public Memory16_2nd ( int size ) {
         zeroUnit = current = new MemoryUnit( currentLength = size );
         currentData = current.data;
     }
@@ -64,7 +64,7 @@ public class Memory8_2nd implements BfMemory {
     }
 
     private MemoryUnit alloc() {
-        return new MemoryUnit( currentLength << 1 );
+        return new MemoryUnit( BASE_MEMORY_SIZE );
     }
 
     public void forward ( int delta ) {
@@ -143,11 +143,11 @@ public class Memory8_2nd implements BfMemory {
         offset = 0;
         for( ; u != current && u.left != null; u = u.right )
             offset -= u.length;
-        return offset + currentOffset;
+        return offset + currentOffset; // TODO: what about absolute address?
     }
 
     public void set ( int value ) {
-        currentData[currentOffset] = (byte) value;
+        currentData[currentOffset] = (short) value;
     }
 
     public void zero () {
@@ -163,15 +163,13 @@ public class Memory8_2nd implements BfMemory {
     }
 
     public void increaseAt ( int delta ) {
-        final byte v = currentData[currentOffset];
-        if( v == 0 )
-            return;
         int newOffset = currentOffset + delta;
         if( newOffset >= 0 && currentOffset < currentLength ) {
-            currentData[newOffset] += v;
+            currentData[newOffset] += currentData[currentOffset];
         } else {
             final MemoryUnit currentUnit = current;
             final int oldOffset = this.currentOffset;
+            final short v = currentData[oldOffset];
 
             if( delta > 0 )
                 forward( delta );
@@ -191,8 +189,6 @@ public class Memory8_2nd implements BfMemory {
 
     public void increaseAt ( int[] deltas, int[] values ) {
         final int v = currentData[currentOffset];
-        if( v == 0 )
-            return;
         currentData[currentOffset] = 0;
         final MemoryUnit currentUnit = current;
         final int offset = currentOffset;
@@ -222,8 +218,6 @@ public class Memory8_2nd implements BfMemory {
 
     public void increaseAt ( int[] code, int base ) {
         final int v = currentData[currentOffset];
-        if( v == 0 )
-            return;
         currentData[currentOffset] = 0;
         final MemoryUnit currentUnit = current;
         final int offset = currentOffset;
@@ -251,5 +245,4 @@ public class Memory8_2nd implements BfMemory {
         currentData = current.data;
         currentLength = current.length;
     }
-
 }

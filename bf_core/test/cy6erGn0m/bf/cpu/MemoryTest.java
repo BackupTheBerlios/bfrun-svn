@@ -18,7 +18,7 @@ import static org.junit.Assert.*;
  */
 public class MemoryTest {
 
-    BfMemory memory = new Memory8_2nd(20);
+    BfMemory memory = new Memory16_2nd(20);
     
     public MemoryTest() {
     }
