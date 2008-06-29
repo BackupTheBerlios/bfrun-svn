@@ -35,7 +35,7 @@ public class Processor implements BfCpu {
     protected final IOBus bus;
     protected BfMemory memory;
     protected final Instruction[] instructions;
-    protected int cp = 0;
+    protected int CP = 0;
     protected boolean expectOptimizedCode = false;
 
     public Processor ( Instruction[] instructions, IOBus bus, BfMemory memory ) {
@@ -78,7 +78,7 @@ public class Processor implements BfCpu {
                     try {
                         memory.backward( -op );
                     } catch ( IndexOutOfBoundsException e ) {
-                        throw new FatalException( cp, currentInstruction, e.getMessage() );
+                        throw new FatalException( CP, currentInstruction, e.getMessage() );
                     }
                 }
                 break;
@@ -89,7 +89,7 @@ public class Processor implements BfCpu {
                 try {
                     memory.backward1();
                 } catch ( IndexOutOfBoundsException e ) {
-                    throw new FatalException( cp, currentInstruction, e.getMessage() );
+                    throw new FatalException( CP, currentInstruction, e.getMessage() );
                 }
                 break;
             case Instruction.JUMP_FORWARD_CODE:
@@ -100,11 +100,11 @@ public class Processor implements BfCpu {
                 break;
             case Instruction.JUMP_ON_ZERO_CODE:
                 if ( memory.isZero() )
-                    cp = currentInstruction.op;
+                    CP = currentInstruction.op;
                 break;
             case Instruction.JUMP_ON_NONZERO_CODE:
                 if ( memory.isNonZero() )
-                    cp = currentInstruction.op;
+                    CP = currentInstruction.op;
                 break;
             case Instruction.DATA_MOVE:
                 if ( currentInstruction.op != 0 )
@@ -120,11 +120,12 @@ public class Processor implements BfCpu {
                 memory.set( bus.in() );
                 break;
             default:
-                throw new FatalException( cp, currentInstruction, "unknown instruction" );
+                throw new FatalException( CP, currentInstruction, "unknown instruction" );
         }
     }
 
     public synchronized void perform () throws DebugException {
+        int cp = CP;
         try {
             final int m = instructions.length;
             if ( cp < m ) {
@@ -174,7 +175,7 @@ public class Processor implements BfCpu {
                                     memory.increaseAt( currentInstruction.op );
                                 else
                                     memory.increaseAt( currentInstruction.extOps, currentInstruction.extOps2 );
-                                memory.zero();
+//                                memory.zero();
                                 break;
                             case Instruction.FORWARD_CODE:
                                 memory.forward1();
@@ -251,7 +252,7 @@ public class Processor implements BfCpu {
                                     memory.increaseAt( currentInstruction.op );
                                 else
                                     memory.increaseAt( currentInstruction.extOps, currentInstruction.extOps2 );
-                                memory.zero();
+//                                memory.zero();
                                 break;
                             case Instruction.IN_CODE:
                                 memory.set( bus.in() );
@@ -267,34 +268,36 @@ public class Processor implements BfCpu {
             currentInstruction = instructions[cp];
         } catch ( IndexOutOfBoundsException e ) {
             throw new FatalException( cp, ( currentInstruction = instructions[cp] ), e.getMessage() );
+        } finally {
+            CP = cp;
         }
     }
 
     public boolean isEnd () {
-        return ( cp >= instructions.length );
+        return ( CP >= instructions.length );
     }
 
     public synchronized void step () throws DebugException {
         try {
             interrupted = false;
-            if ( cp < instructions.length ) {
-                currentInstruction = instructions[cp];
+            if ( !isEnd() ) {
+                currentInstruction = instructions[CP];
                 performOne();
-                if ( ++cp < instructions.length )
-                    throw new BreakpointException( cp, instructions[cp] );
+                if ( ++CP < instructions.length )
+                    throw new BreakpointException( CP, instructions[CP] );
             }
         } catch ( DebugException ex ) {
-            ex.setAddress( cp );
+            ex.setAddress( CP );
             throw ex;
         } catch ( IOException e ) {
-            throw new FatalException( cp, instructions[cp], "I/O problem: " + e.getMessage() );
+            throw new FatalException( CP, instructions[CP], "I/O problem: " + e.getMessage() );
         }
     }
 
     public synchronized void reset () {
         interrupt();
         memory.teardown();
-        cp = 0;
+        CP = 0;
     }
     private int[] jumpsTable = null;
 
@@ -309,6 +312,7 @@ public class Processor implements BfCpu {
 
                                     
     protected void jumpForward () throws DebugException {
+        int cp = CP;
         if ( memory.isZero() ) {
             int c = jumpsTable[cp];
             if ( c != -1 ) {
@@ -341,10 +345,12 @@ public class Processor implements BfCpu {
                 jumpsTable[oldcp] = cp;
                 jumpsTable[cp] = oldcp;
             }
+            CP = cp;
         }
     }
 
     protected void jumpBackward () throws DebugException {
+        int cp = CP;
         int level = 0;
         final int oldcp = cp--;
         if ( oldcp > 0 ) {
@@ -368,13 +374,14 @@ public class Processor implements BfCpu {
         }
         jumpsTable[oldcp] = cp;
         jumpsTable[cp] = oldcp;
+        CP = cp;
     }
 
     public Instruction getCurrentInstruction () {
-        return ( currentInstruction != null ) ? currentInstruction : instructions[cp];
+        return ( currentInstruction != null ) ? currentInstruction : instructions[CP];
     }
     
     public int getCurrentAddress() {
-        return cp;
+        return CP;
     }
 }

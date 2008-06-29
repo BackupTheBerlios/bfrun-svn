@@ -26,21 +26,36 @@ import java.util.Collection;
 import java.util.EmptyStackException;
 import java.util.Stack;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
  * @author cy6ergn0m
  */
 public class OptimizedCompiller implements Compiller {
-    
+
     private int optimizationLevel = 2;
 
     public void setOptimizationLevel ( int optimizationLevel ) {
         this.optimizationLevel = optimizationLevel;
     }
 
-    int count = 0;
-    int approx_src = 0;
+    protected final int indexOf ( List<Instruction> array, Instruction[] toBeFound, int fromIndex ) {
+        if ( toBeFound == null || toBeFound.length == 0 )
+            return -1;
+        int start_i = toBeFound[0].ival;
+        int l = toBeFound.length;
+        big_find:
+        for ( int i = fromIndex, m = array.size(); i < m; ++i ) {
+            if ( array.get( i ).ival == start_i ) {
+                for ( int j = i + 1, k = 1; j < m && k < l; ++j, ++k )
+                    if ( array.get( j ).ival != toBeFound[k].ival )
+                        continue big_find;
+                return i;
+            }
+        }
+        return -1;
+    }
 
     private ArrayList<Instruction> pass1 ( ArrayList<Instruction> input ) {
         ArrayList<Instruction> result = new ArrayList<Instruction>( input.size() );
@@ -48,7 +63,7 @@ public class OptimizedCompiller implements Compiller {
             int value = 0;
             int source = input.get( 0 ).sourceIndex;
             for ( Instruction i : input ) {
-                switch ( i.ival ) {
+                switch (i.ival) {
                     case Instruction.INC_CODE:
                         value++;
                         break;
@@ -77,7 +92,7 @@ public class OptimizedCompiller implements Compiller {
             int value = 0;
             int source = input.get( 0 ).sourceIndex;
             for ( Instruction i : input ) {
-                switch ( i.ival ) {
+                switch (i.ival) {
                     case Instruction.FORWARD_CODE:
                         value++;
                         break;
@@ -109,17 +124,17 @@ public class OptimizedCompiller implements Compiller {
             boolean buffering = false;
             zero_find:
             for ( Instruction i : input ) {
-                switch ( i.ival ) {
+                switch (i.ival) {
                     case Instruction.JUMP_FORWARD_CODE:
                         if ( buffering )
-                            flush(result, buffer);
+                            flush( result, buffer );
                         buffering = true;
                         break;
                     case Instruction.JUMP_BACKWARD_CODE:
                         if ( buffer.size() == 2 && buffering ) {
                             if ( buffer.get( 0 ).ival == Instruction.JUMP_FORWARD_CODE &&
-                                    ( buffer.get( 1 ).ival == Instruction.INC_CODE ||
-                                    buffer.get( 1 ).ival == Instruction.DEC_CODE ) ) {
+                                    (buffer.get( 1 ).ival == Instruction.INC_CODE ||
+                                    buffer.get( 1 ).ival == Instruction.DEC_CODE) ) {
 
                                 result.add( new Instruction( InstructionSet.ZERO, 0, source ) );
                                 buffer.clear();
@@ -129,12 +144,12 @@ public class OptimizedCompiller implements Compiller {
                         }
                     default:
                         if ( buffering && buffer.size() > 3 ) {
-                            flush(result, buffer);
+                            flush( result, buffer );
                             buffering = false;
                         }
                 }
-                
-                ( buffering? buffer : result ).add( i );
+
+                (buffering ? buffer : result).add( i );
             }
         }
         return result;
@@ -148,9 +163,9 @@ public class OptimizedCompiller implements Compiller {
      * @throws cy6erGn0m.bf.compiller.CompillingException 
      */
     public synchronized Instruction[] compile ( char[] chars,
-                                                  int optimizationLevel ) throws CompillingException {
+            int optimizationLevel ) throws CompillingException {
         if ( optimizationLevel == 0 )
-            return ( new SimpleCompiller() ).compile( chars );
+            return (new SimpleCompiller()).compile( chars );
 
         ArrayList<Instruction> compiled = new ArrayList<Instruction>( chars.length );
         for ( int j = 0; j < chars.length; ++j ) {
@@ -167,16 +182,16 @@ public class OptimizedCompiller implements Compiller {
             optimized = pass2( optimized );
 
             optimized = pass3( optimized );
-            
+
             if ( optimizationLevel > 1 ) {
                 optimized = data_move_optimization( optimized );
                 if ( optimizationLevel > 2 )
                     optimized = noSideEffectOptimization( optimized );
             }
-            optimized = calcJumps(optimized);
+            optimized = calcJumps( optimized );
         }
 
-        return SimpleCompiller.toArray(optimized);
+        return SimpleCompiller.toArray( optimized );
     }
 
     public synchronized Instruction[] compile ( String code ) throws CompillingException {
@@ -210,7 +225,7 @@ public class OptimizedCompiller implements Compiller {
                     // ]
                     // here we get simplest cycle
                     // expected parse
-                    if ( buffer.size() >= 2 && ( buffer.get( 0 ).ival == Instruction.JUMP_ON_ZERO_CODE || buffer.get( 0 ).ival == Instruction.JUMP_FORWARD_CODE ) ) {
+                    if ( buffer.size() >= 2 && (buffer.get( 0 ).ival == Instruction.JUMP_ON_ZERO_CODE || buffer.get( 0 ).ival == Instruction.JUMP_FORWARD_CODE) ) {
                         // [- or [
                         int currentIndex = 0;
                         IntVector indexes = new IntVector( 4 );
@@ -222,7 +237,7 @@ public class OptimizedCompiller implements Compiller {
                         pairs:
                         for ( int j = decAtFirst ? 2 : 1; j < m; ++j ) {
                             final int iv = buffer.get( j ).ival;
-                            switch ( iv ) {
+                            switch (iv) {
                                 case Instruction.MOVE_PTR_CODE:
                                 case Instruction.FORWARD_CODE:
                                 case Instruction.BACKWARD_CODE:
@@ -297,14 +312,14 @@ public class OptimizedCompiller implements Compiller {
                         }
                     }
                     isInLoop = false;
-                    flush(result, buffer);
+                    flush( result, buffer );
                     result.add( i );
                     continue;
                 }
                 buffer.add( i );
             } else {
                 if ( i.ival == Instruction.JUMP_ON_ZERO_CODE || i.ival == Instruction.JUMP_FORWARD_CODE ) {
-                    flush(result, buffer);
+                    flush( result, buffer );
                     buffer.add( i );
                     isInLoop = true;
                 } else
@@ -316,7 +331,7 @@ public class OptimizedCompiller implements Compiller {
         return result;
     }
 
-    private static ArrayList<Instruction> noSideEffectOptimization( ArrayList<Instruction> code ) {
+    private static ArrayList<Instruction> noSideEffectOptimization ( ArrayList<Instruction> code ) {
         int optimizations;
         ArrayList<Instruction> src;
         ArrayList<Instruction> result = code;
@@ -326,40 +341,40 @@ public class OptimizedCompiller implements Compiller {
             optimizations = 0;
             src = result;
             // TODO: if( src.size() == 1...
-            if( src.size() > 0 ) {
+            if ( src.size() > 0 ) {
                 int m = src.size() - 1;
                 result = new ArrayList<Instruction>( m + 1 );
                 main:
-                for( int i = 0;  i < m; ++i) {
-                    switch( (instr = src.get(i)).ival ) {
+                for ( int i = 0; i < m; ++i ) {
+                    switch ((instr = src.get( i )).ival) {
                         case Instruction.ZERO_CODE:
                         case Instruction.DEC_CODE:
                         case Instruction.INC_CODE:
                         case Instruction.IN_CODE:
                         case Instruction.MODIFY_CODE:
-                            if( src.get( i + 1 ).ival == Instruction.ZERO_CODE ) {
+                            if ( src.get( i + 1 ).ival == Instruction.ZERO_CODE ) {
                                 optimizations++;
                                 continue main;
                             }
                             break;
                         case Instruction.JUMP_FORWARD_CODE:
-                            if( src.get( i + 1).ival == Instruction.JUMP_BACKWARD_CODE ) {
+                            if ( src.get( i + 1 ).ival == Instruction.JUMP_BACKWARD_CODE ) {
                                 ++i;
                                 optimizations++;
                                 continue main;
                             }
                             break;
                         case Instruction.JUMP_BACKWARD_CODE:
-                            if( src.get( i + 1 ).ival == Instruction.ZERO_CODE ) {
+                            if ( src.get( i + 1 ).ival == Instruction.ZERO_CODE ) {
                                 ++i;
                                 optimizations++;
-                                // note: do not continue here
+                            // note: do not continue here
                             }
                         case Instruction.DATA_MOVE:
-                            if( src.get(i + 1).ival == Instruction.ZERO_CODE ) {
+                            if ( src.get( i + 1 ).ival == Instruction.ZERO_CODE ) {
                                 ++i;
                                 optimizations++;
-                                // note: do not continue here
+                            // note: do not continue here
                             }
                             break;
                         default:
@@ -367,17 +382,17 @@ public class OptimizedCompiller implements Compiller {
                     }
                     result.add( instr );
                 }
-                instr = src.get(m);
-                if( instr.ival == Instruction.OUT_CODE || instr.ival == Instruction.JUMP_BACKWARD_CODE )
+                instr = src.get( m );
+                if ( instr.ival == Instruction.OUT_CODE || instr.ival == Instruction.JUMP_BACKWARD_CODE )
                     result.add( src.get( m ) );
-                if( ++deep == 1000 )
+                if ( ++deep == 1000 )
                     throw new IllegalStateException();
             }
-        } while( optimizations > 0 );
+        } while ( optimizations > 0 );
         return src;
     }
 
-    private static void flush( Collection<Instruction> big, Collection<Instruction> toBeFlushed ) {
+    private static void flush ( Collection<Instruction> big, Collection<Instruction> toBeFlushed ) {
         big.addAll( toBeFlushed );
         toBeFlushed.clear();
     }
@@ -390,9 +405,9 @@ public class OptimizedCompiller implements Compiller {
             Stack<Integer> stack = new Stack<Integer>();
             for ( int i = 0; i < m; i++ ) {
                 Instruction ins = compiled.get( i );
-                approx_src = ins.sourceIndex;
+                int approx_src = ins.sourceIndex;
                 final Instruction i2;
-                switch ( ins.instr ) {
+                switch (ins.instr) {
                     case JUMP_FORWARD:
                         //i2 = new Instruction( InstructionSet.JUMP_ON_ZERO, findForward( compiled, i ), approx_src );
                         i2 = new Instruction( InstructionSet.NONE, 0, approx_src );
@@ -401,7 +416,7 @@ public class OptimizedCompiller implements Compiller {
                     case JUMP_BACKWARD:
                         int left_b = stack.pop();
                         Instruction old = result.get( left_b );
-                        result.set(left_b, new Instruction( InstructionSet.JUMP_ON_ZERO, i, old.sourceIndex ) );
+                        result.set( left_b, new Instruction( InstructionSet.JUMP_ON_ZERO, i, old.sourceIndex ) );
                         i2 = new Instruction( InstructionSet.JUMP_ON_NONZERO, left_b, approx_src );
                         break;
                     default:
@@ -409,10 +424,10 @@ public class OptimizedCompiller implements Compiller {
                 }
                 result.add( i2 );
             }
-            if( stack.size() > 0 )
+            if ( stack.size() > 0 )
                 throw new CompillingException( "brackets disballance" );
             return result;
-        } catch( EmptyStackException e ) {
+        } catch (EmptyStackException e) {
             throw new CompillingException( "brackets disballance" );
         }
     }
