@@ -40,16 +40,16 @@ public class DebugProcessor extends Processor implements DebugPoint {
         lastDump = null;
         try {
             if( CP < instructions.length ) {
-                currentInstruction = instructions[ CP ];
+                _currentInstruction = instructions[ CP ];
                 for( ; CP < instructions.length; ) {
                     if( interrupted ) {
                         interrupted = false;
-                        throw new BreakpointException( CP, currentInstruction );
+                        throw new BreakpointException( CP, _currentInstruction );
                     }
                     performOne();
                     if( ++CP < instructions.length ) {
-                        if( ( currentInstruction = instructions[ CP ] ).bp )
-                            throw new BreakpointException( CP, currentInstruction );
+                        if( ( _currentInstruction = instructions[ CP ] ).bp )
+                            throw new BreakpointException( CP, _currentInstruction );
                     }
                 }
             }
@@ -58,7 +58,7 @@ public class DebugProcessor extends Processor implements DebugPoint {
             throw e;
         } catch( IOException e ) {
             e.printStackTrace();
-            throw new FatalException(CP, currentInstruction, "I/O exception at " + e.getMessage() );
+            throw new FatalException(CP, _currentInstruction, "I/O exception at " + e.getMessage() );
         }
     }
 
