@@ -33,7 +33,7 @@ import cy6erGn0m.bf.cpu.IOBus;
 import cy6erGn0m.bf.cpu.Memory16_2nd;
 import cy6erGn0m.bf.cpu.Memory32;
 import cy6erGn0m.bf.cpu.Memory8_2nd;
-import cy6erGn0m.bf.cpu.Processor2;
+import cy6erGn0m.bf.cpu.Processor;
 import cy6erGn0m.bf.iset.Instruction;
 import cy6erGn0m.bf.iset.InstructionSet;
 import cy6erGn0m.bf.vm.StreamedBus;
@@ -51,11 +51,12 @@ import java.util.TreeMap;
  */
 public class Main {
 
-    public static final String bf_version = "1.1.3m7";
+    public static final String bf_version = "1.2b1";
 
     protected static void help () {
         System.out.println( "Brainf*ck interpreter. v." + bf_version + "\n" +
                 "This is Free software: no any waranties.\n" +
+                "dev by cy6erGn0m\n" +
                 "\nusage:\n" +
                 "java -jar bfrun.jar [-no-optimize] [-alt-cpu|-mad-cpu] [-16|-32] [-O0|-O1|-O2|-O3] [-dump] [-time] [--] file\n" );
         System.out.println( "-no-optimize\t\trun bf Pcode without optimizations" );
@@ -78,6 +79,7 @@ public class Main {
     protected static void printUsage () {
         System.out.println( "Brainf*ck interpreter. v." + bf_version + "\n" +
                 "This is Free software: no any waranties.\n" +
+                "dev by cy6erGn0m\n" +
                 "\nusage:\n" +
                 "java -jar bfrun.jar [-no-optimize] [-alt-cpu|-mad-cpu] [-16|-32] [-O0|-O1|-O2|-O3] [-dump] [-time] [-stat] [--] file\n" +
                 "or java -jar bfrun.jar -help\n" );
@@ -221,7 +223,7 @@ public class Main {
         } else if( madcpu ) {
             cpu = new AltProcessor2( memory, bus, new AltcpuCompiller().compile( code ) );
         } else {
-            cpu = new Processor2( code, bus, memory );
+            cpu = new Processor( code, bus, memory );
 //            if ( !altcpu )
 //                ( (Processor) cpu ).setExpectOptimizedCode( !noOptimize );
         }
