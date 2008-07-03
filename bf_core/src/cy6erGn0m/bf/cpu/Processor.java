@@ -36,13 +36,12 @@ public class Processor implements BfCpu {
     protected BfMemory memory;
     protected final Instruction[] instructions;
     protected int CP = 0;
-    protected boolean expectOptimizedCode = false;
 
     public Processor ( Instruction[] instructions, IOBus bus, BfMemory memory ) {
-        if( ( this.instructions = instructions ) == null )
+        if ( (this.instructions = instructions) == null )
             throw new NullPointerException( "instructions array should not be null" );
-        this.bus = ( bus != null )? bus : new NullBus();
-        this.memory = ( memory != null ) ? memory : new Memory8();
+        this.bus = (bus != null) ? bus : new NullBus();
+        this.memory = (memory != null) ? memory : new Memory8();
         initJumpsTable();
     }
     protected boolean interrupted = false;
@@ -50,14 +49,11 @@ public class Processor implements BfCpu {
     public void interrupt () {
         interrupted = true;
     }
-    Instruction currentInstruction = null;
-
-    public void setExpectOptimizedCode ( boolean expectOptimizedCode ) {
-        this.expectOptimizedCode = expectOptimizedCode;
-    }
+    Instruction _currentInstruction = null;
 
     protected void performOne () throws DebugException, IOException {
-        switch ( currentInstruction.ival ) {
+        final Instruction currentInstruction = _currentInstruction;
+        switch (currentInstruction.ival) {
             case Instruction.JUMP_BACKWARD_CODE:
                 jumpBackward();
                 break;
@@ -77,7 +73,7 @@ public class Processor implements BfCpu {
                 else {
                     try {
                         memory.backward( -op );
-                    } catch ( IndexOutOfBoundsException e ) {
+                    } catch (IndexOutOfBoundsException e) {
                         throw new FatalException( CP, currentInstruction, e.getMessage() );
                     }
                 }
@@ -88,7 +84,7 @@ public class Processor implements BfCpu {
             case Instruction.BACKWARD_CODE:
                 try {
                     memory.backward1();
-                } catch ( IndexOutOfBoundsException e ) {
+                } catch (IndexOutOfBoundsException e) {
                     throw new FatalException( CP, currentInstruction, e.getMessage() );
                 }
                 break;
@@ -124,172 +120,109 @@ public class Processor implements BfCpu {
         }
     }
 
-    public synchronized void perform () throws DebugException {
+    private final void performSomething () throws DebugException {
         int cp = CP;
+        Instruction currentInstruction = null;
+        int iters = 0;
         try {
             final int m = instructions.length;
             if ( cp < m ) {
-                if ( expectOptimizedCode ) {
-                    int op;
-                    main:
-                    do {
-                        switch ( ( currentInstruction = instructions[cp] ).ival ) {
-                            case Instruction.MODIFY_CODE:
-                                memory.delta( currentInstruction.op );
-                                break;
-                            case Instruction.MOVE_PTR_CODE:
-                                if ( ( op = currentInstruction.op ) > 0 )
-                                    memory.forward( op );
-                                else
-                                    memory.backward( -op );
-                                if( interrupted )
-                                    break main;
-                                break;
-                            case Instruction.ZERO_CODE:
-                                memory.zero();
-                                break;
-                            case Instruction.JUMP_ON_ZERO_CODE:
-                                if ( memory.isZero() )
-                                    cp = currentInstruction.op;
-                                break;
-                            case Instruction.JUMP_ON_NONZERO_CODE:
-                                if ( memory.isNonZero() )
-                                    cp = currentInstruction.op;
-                                break;
-                            case Instruction.OUT_CODE:
-                                if( interrupted )
-                                    break main;
-                                bus.out( memory.export() );
-                                break;
-                            case Instruction.DEC_CODE:
-                                memory.decrease();
-                                break;
-                            case Instruction.INC_CODE:
-                                memory.increase();
-                                break;
-                            case Instruction.JUMP_BACKWARD_CODE:
-                                jumpBackward();
-                                break;
-                            case Instruction.DATA_MOVE:
-                                if ( currentInstruction.op != 0 )
-                                    memory.increaseAt( currentInstruction.op );
-                                else
-                                    memory.increaseAt( currentInstruction.extOps, currentInstruction.extOps2 );
+                int op;
+                main:
+                do {
+                    switch ((currentInstruction = instructions[cp]).ival) {
+                        case Instruction.MODIFY_CODE:
+                            memory.delta( currentInstruction.op );
+                            break;
+                        case Instruction.MOVE_PTR_CODE:
+                            if ( (op = currentInstruction.op) > 0 )
+                                memory.forward( op );
+                            else
+                                memory.backward( -op );
+                            break;
+                        case Instruction.ZERO_CODE:
+                            memory.zero();
+                            break;
+                        case Instruction.JUMP_ON_ZERO_CODE:
+                            if ( memory.isZero() )
+                                cp = currentInstruction.op;
+                            break;
+                        case Instruction.JUMP_ON_NONZERO_CODE:
+                            if ( memory.isNonZero() )
+                                cp = currentInstruction.op;
+                            break;
+                        case Instruction.OUT_CODE:
+                            bus.out( memory.export() );
+                            break;
+                        case Instruction.DEC_CODE:
+                            memory.decrease();
+                            break;
+                        case Instruction.INC_CODE:
+                            memory.increase();
+                            break;
+                        case Instruction.JUMP_BACKWARD_CODE:
+                            jumpBackward();
+                            break;
+                        case Instruction.DATA_MOVE:
+                            if ( currentInstruction.op != 0 )
+                                memory.increaseAt( currentInstruction.op );
+                            else
+                                memory.increaseAt( currentInstruction.extOps, currentInstruction.extOps2 );
 //                                memory.zero();
-                                break;
-                            case Instruction.FORWARD_CODE:
-                                memory.forward1();
-                                break;
-                            case Instruction.BACKWARD_CODE:
-                                memory.backward1();
-                                break;
-                            case Instruction.JUMP_FORWARD_CODE:
-                                jumpForward();
-                                break;
-                            case Instruction.IN_CODE:
-                                if( interrupted )
-                                    break main;
-                                memory.set( bus.in() );
-                                break;
-                            default:
-                                throw new FatalException( cp, currentInstruction, "unknown instruction" );
-                        }
-                    } while ( ++cp < m );
-                } else { // not optimized
-                    do {
-                        switch ( instructions[cp].ival ) {
-                            case Instruction.DEC_CODE:
-                                memory.decrease();
-                                break;
-                            case Instruction.INC_CODE:
-                                memory.increase();
-                                break;
-                            case Instruction.JUMP_BACKWARD_CODE:
-                                if( memory.isNonZero() ) {
-                                    final int c;
-                                    if( ( c = jumpsTable[ cp ] ) == -1 )
-                                        jumpBackward();
-                                    else
-                                        cp = c;
-                                }
-                                break;
-                            case Instruction.OUT_CODE:
-                                bus.out( memory.export() );
-                                break;
-                            case Instruction.FORWARD_CODE:
-                                memory.forward1();
-                                break;
-                            case Instruction.BACKWARD_CODE:
-                                memory.backward1();
-                                break;
-                            case Instruction.JUMP_FORWARD_CODE:
-                                jumpForward();
-                                break;
-                            case Instruction.MODIFY_CODE:
-                                memory.delta( instructions[cp].op );
-                                break;
-                            case Instruction.MOVE_PTR_CODE:
-                                final int op = instructions[cp].op;
-                                if ( op > 0 )
-                                    memory.forward( op );
-                                else
-                                    memory.backward( -op );
-                                break;
-                            case Instruction.ZERO_CODE:
-                                memory.zero();
-                                break;
-                            case Instruction.JUMP_ON_ZERO_CODE:
-                                if ( memory.isZero() )
-                                    cp = instructions[cp].op;
-                                break;
-                            case Instruction.JUMP_ON_NONZERO_CODE:
-                                if ( memory.isNonZero() )
-                                    cp = instructions[cp].op;
-                                break;
-                            case Instruction.DATA_MOVE:
-                                currentInstruction = instructions[cp];
-                                if ( currentInstruction.op != 0 )
-                                    memory.increaseAt( currentInstruction.op );
-                                else
-                                    memory.increaseAt( currentInstruction.extOps, currentInstruction.extOps2 );
-//                                memory.zero();
-                                break;
-                            case Instruction.IN_CODE:
-                                memory.set( bus.in() );
-                                break;
-                            default:
-                                throw new FatalException( cp, ( currentInstruction = instructions[cp] ), "unknown instruction" );
-                        }
-                    } while ( ++cp < m );
-                }
+                            break;
+                        case Instruction.FORWARD_CODE:
+                            memory.forward1();
+                            break;
+                        case Instruction.BACKWARD_CODE:
+                            memory.backward1();
+                            break;
+                        case Instruction.JUMP_FORWARD_CODE:
+                            jumpForward();
+                            break;
+                        case Instruction.IN_CODE:
+                            memory.set( bus.in() );
+                            break;
+                        default:
+                            throw new FatalException( cp, currentInstruction, "unknown instruction" );
+                    }
+                } while ( ++cp < m && --iters < 1000 );
             }
-        } catch ( IOException e ) {
-            e.printStackTrace();
-            currentInstruction = instructions[cp];
-        } catch ( IndexOutOfBoundsException e ) {
-            throw new FatalException( cp, ( currentInstruction = instructions[cp] ), e.getMessage() );
+        } catch (IOException e) {
+            throw new FatalException( cp, currentInstruction, "I/O problem: " + e.getMessage() );
+        } catch (IndexOutOfBoundsException e) {
+            throw new FatalException( cp, (currentInstruction = instructions[cp]), e.getMessage() );
         } finally {
             CP = cp;
+            _currentInstruction = currentInstruction;
+        }
+    }
+
+    public synchronized void perform () throws DebugException {
+        try {
+            while ( !isEnd() && !interrupted )
+                performSomething();
+        } catch (IndexOutOfBoundsException e) {
+            throw new FatalException( CP, (_currentInstruction = instructions[CP]), e.getMessage() );
         }
     }
 
     public boolean isEnd () {
-        return ( CP >= instructions.length );
+        return (CP >= instructions.length);
     }
 
     public synchronized void step () throws DebugException {
         try {
             interrupted = false;
             if ( !isEnd() ) {
-                currentInstruction = instructions[CP];
+                _currentInstruction = instructions[CP];
                 performOne();
                 if ( ++CP < instructions.length )
                     throw new BreakpointException( CP, instructions[CP] );
             }
-        } catch ( DebugException ex ) {
+        } catch (DebugException ex) {
             ex.setAddress( CP );
             throw ex;
-        } catch ( IOException e ) {
+        } catch (IOException e) {
             throw new FatalException( CP, instructions[CP], "I/O problem: " + e.getMessage() );
         }
     }
@@ -310,7 +243,6 @@ public class Processor implements BfCpu {
         }
     }
 
-                                    
     protected void jumpForward () throws DebugException {
         int cp = CP;
         if ( memory.isZero() ) {
@@ -323,7 +255,7 @@ public class Processor implements BfCpu {
                 final int m = instructions.length;
                 loop:
                 for (; cp < m; cp++ ) {
-                    switch ( instructions[cp].ival ) {
+                    switch (instructions[cp].ival) {
                         case Instruction.JUMP_FORWARD_CODE:
                             level++;
                             break;
@@ -356,7 +288,7 @@ public class Processor implements BfCpu {
         if ( oldcp > 0 ) {
             loop:
             do {
-                switch ( instructions[cp].ival ) {
+                switch (instructions[cp].ival) {
                     case Instruction.JUMP_BACKWARD_CODE:
                         level++;
                         break;
@@ -378,10 +310,10 @@ public class Processor implements BfCpu {
     }
 
     public Instruction getCurrentInstruction () {
-        return ( currentInstruction != null ) ? currentInstruction : instructions[CP];
+        return (_currentInstruction != null) ? _currentInstruction : instructions[CP];
     }
-    
-    public int getCurrentAddress() {
+
+    public int getCurrentAddress () {
         return CP;
     }
 }
