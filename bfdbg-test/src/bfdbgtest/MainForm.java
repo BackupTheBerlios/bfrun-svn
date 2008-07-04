@@ -126,22 +126,22 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         try {
             currentState = DebugState.NOT_RUNNING;
             if ( sourceFile == null )
-                return "source file not set";
+                return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("source_file_not_set");
             if ( !sourceFile.exists() )
-                return "source file not found";
+                return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("source_file_not_found");
             dbg_vm = new Debugger( readFromFile( sourceFile ), 8, new NullBus() );
             dbg_vm.registerDebugClient( this );
             dbg_vm.begin();
             currentState = DebugState.PAUSED;
             for ( Integer i : breakpoints )
                 dbg_vm.setBreakpoint( i, true );
-            return "OK";
+            return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("OK");
         } catch (CompillingException ex) {
 //            Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
-            return "compillation failed";
+            return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("compillation_failed");
         } catch (IOException ex) {
 //            Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );;
-            return "I/O exception";
+            return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("I/O_exception");
         }
     }
 
@@ -212,7 +212,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     buttonToggle.setEnabled( false );
                     buttonKill.setEnabled( false );
                     buttonStep.setEnabled( false );
-                    setStatusText( "Ready" );
+                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("Ready") );
                     break;
                 case NOT_RUNNING:
                     jTextField1.setEnabled( true );
@@ -223,7 +223,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     buttonToggle.setEnabled( false );
                     buttonKill.setEnabled( false );
                     buttonStep.setEnabled( false );
-                    setStatusText( "Ready" );
+                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("Ready") );
                     break;
                 case PAUSED:
                     jTextField1.setEnabled( false );
@@ -234,7 +234,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     buttonToggle.setEnabled( true );
                     buttonKill.setEnabled( true );
                     buttonStep.setEnabled( true );
-                    setStatusText( "At breakpoint" );
+                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("At_breakpoint") );
                     break;
                 case RUNNING_AND_PERFORMING:
                     jTextField1.setEnabled( false );
@@ -245,10 +245,10 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     buttonToggle.setEnabled( true );
                     buttonKill.setEnabled( true );
                     buttonStep.setEnabled( false );
-                    setStatusText( "Running" );
+                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("Running") );
                     break;
                 default:
-                    setStatusText( "Internal Error" );
+                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("Internal_Error") );
                     kill();
                     setButtonsState();
                     throw new IllegalStateException();
@@ -298,14 +298,15 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         });
 
         jButton1.setFont(new java.awt.Font("Dialog", 0, 8));
-        jButton1.setText("...");
+        java.util.ResourceBundle bundle = java.util.ResourceBundle.getBundle("bfdbgtest/Bundle"); // NOI18N
+        jButton1.setText(bundle.getString("...")); // NOI18N
         jButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton1ActionPerformed(evt);
             }
         });
 
-        statusLabel.setText("Status");
+        statusLabel.setText(bundle.getString("Status")); // NOI18N
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -326,14 +327,14 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         debugOutputWindow.setEditable(false);
         jScrollPane2.setViewportView(debugOutputWindow);
 
-        buttonRun.setText("Run");
+        buttonRun.setText(bundle.getString("Run")); // NOI18N
         buttonRun.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 buttonRunActionPerformed(evt);
             }
         });
 
-        buttonPause.setText("Pause");
+        buttonPause.setText(bundle.getString("Pause")); // NOI18N
         buttonPause.setEnabled(false);
         buttonPause.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -341,7 +342,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
-        buttonContinue.setText("Continue");
+        buttonContinue.setText(bundle.getString("Continue")); // NOI18N
         buttonContinue.setEnabled(false);
         buttonContinue.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -349,7 +350,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
-        buttonToggle.setText("Toggle");
+        buttonToggle.setText(bundle.getString("Toggle")); // NOI18N
         buttonToggle.setEnabled(false);
         buttonToggle.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -357,7 +358,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
-        buttonKill.setText("Kill");
+        buttonKill.setText(bundle.getString("Kill")); // NOI18N
         buttonKill.setEnabled(false);
         buttonKill.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -366,14 +367,14 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         });
 
         jButton2.setFont(new java.awt.Font("Dialog", 0, 8));
-        jButton2.setText("About");
+        jButton2.setText(bundle.getString("About")); // NOI18N
         jButton2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton2ActionPerformed(evt);
             }
         });
 
-        buttonStep.setText("Step");
+        buttonStep.setText(bundle.getString("Step")); // NOI18N
         buttonStep.setEnabled(false);
         buttonStep.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -454,7 +455,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
 
     private void buttonRunActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonRunActionPerformed
         String rs = tryRun();
-        if ( !rs.equals( "OK" ) )
+        if ( !rs.equals( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("OK") ) )
             statusLabel.setText( rs );
         setButtonsState();
     }//GEN-LAST:event_buttonRunActionPerformed
@@ -544,7 +545,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             if ( e != null ) {
                 int pos = e.getInstruction().sourceIndex;
                 markBreakpoint( pos, null, true );
-                writeln( "paused at " + dbg_vm.getCpu().getCurrentAddress() + ", memory state: value at address " + dbg_vm.getMemory().getAddress() + " is " + dbg_vm.getMemory().export() );
+                writeln( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("paused_at_") + dbg_vm.getCpu().getCurrentAddress() + java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString(",_memory_state:_value_at_address_") + dbg_vm.getMemory().getAddress() + java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("_is_") + dbg_vm.getMemory().export() );
             }
         }
     }
@@ -585,7 +586,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     public void notifyException ( DebugException e ) {
         if ( e != null ) {
             try {
-                String m = e.getMessage() + "\n";
+                String m = e.getMessage() + java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("\n");
                 consoleDoc.insertString( consoleDoc.getLength(), m, e.isFatal() ? redText : null );
             } catch (BadLocationException ex) {
                 Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
