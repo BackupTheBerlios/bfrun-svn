@@ -26,7 +26,7 @@ import cy6erGn0m.bf.iset.Instruction;
  *
  * @author cy6ergn0m
  */
-public class EndOfCodeException extends DebugException {
+public class EndOfCodeException extends BreakpointException {
 
     public EndOfCodeException ( int address, Instruction instruction ) {
         super( address, instruction );

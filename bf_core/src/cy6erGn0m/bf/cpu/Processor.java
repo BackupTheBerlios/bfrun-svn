@@ -219,16 +219,16 @@ public class Processor implements BfCpu {
     public synchronized void step () throws DebugException {
         try {
             interrupted = false;
-            if ( !isEnd() ) {
-                _currentInstruction = instructions[CP];
-                performOne();
-                if( isEnd() )
-                    throw new EndOfCodeException( CP, _currentInstruction );
-                if( CP < 0 )
-                    throw new FatalException( CP, _currentInstruction, "Internal interpreter error: code pointer is negative" );
-                CP++;
-                throw new BreakpointException( CP, instructions[CP] );
-            }
+            if( isEnd() )
+                throw new EndOfCodeException( CP, _currentInstruction );
+            _currentInstruction = instructions[CP];
+            performOne();
+            if( CP < 0 )
+                throw new FatalException( CP, _currentInstruction, "Internal interpreter error: code pointer is negative" );
+            CP++;
+            if( isEnd() )
+                throw new EndOfCodeException( CP, _currentInstruction );
+            throw new BreakpointException( CP, instructions[CP] );
         } catch (DebugException ex) {
             ex.setAddress( CP );
             throw ex;

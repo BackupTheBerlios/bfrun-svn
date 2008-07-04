@@ -136,6 +136,9 @@ public class Debugger extends Thread {
             try {
                 performing = true;
                 cpu.step();
+            } catch ( EndOfCodeException e ) {
+                notifyDie( e ); // TODO:
+                running = false;
             } catch (BreakpointException e) {
                 bp = e;
             } catch (DebugException e) {
@@ -244,6 +247,8 @@ public class Debugger extends Thread {
                 cpu.perform();
                 running = false;
                 notifyDie( new EndOfCodeException( 0, cpu.getCurrentInstruction() ) );
+            } catch ( EndOfCodeException e ) {
+                notifyDie( e );
             } catch (BreakpointException bp) {
                 notifyBreak( bp );
             } catch (FatalException e) {
