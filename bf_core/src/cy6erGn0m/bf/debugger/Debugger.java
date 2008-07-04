@@ -214,6 +214,8 @@ public class Debugger extends Thread {
             synchronized ( notRunning ) {
                 notRunning.notifyAll();
             }
+
+            notifyBreak( new BreakpointException( cpu.getCurrentAddress(), cpu.getCurrentInstruction() ) );
         }
     }
 

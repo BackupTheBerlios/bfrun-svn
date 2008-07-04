@@ -226,6 +226,7 @@ public class Processor implements BfCpu {
                     throw new EndOfCodeException( CP, _currentInstruction );
                 if( CP < 0 )
                     throw new FatalException( CP, _currentInstruction, "Internal interpreter error: code pointer is negative" );
+                CP++;
                 throw new BreakpointException( CP, instructions[CP] );
             }
         } catch (DebugException ex) {
