@@ -53,7 +53,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     Style normalStyle;
     StyledDocument consoleDoc;
     Style redText;
-    Integer lock = new Integer( 0 );
+    final Object lock = new Object();
     protected ArrayList<Integer> breakpoints = new ArrayList<Integer>( 10 );
 
     /** Creates new form MainForm */
@@ -76,6 +76,9 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         consoleDoc = debugOutputWindow.getStyledDocument();
         redText = consoleDoc.addStyle( "fatal message", null );
         redText.addAttribute( StyleConstants.Foreground, Color.RED );
+
+        String home = System.getProperty( "user.home" );
+        jTextField1.setText( home != null? home : "" );
     }
     protected Debugger dbg_vm = null;
     protected File sourceFile = null;
@@ -83,7 +86,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
 
     protected boolean setSourceFile ( String path ) {
         File f = new File( path );
-        if ( ( sourceFile == null ) || ( !f.equals( sourceFile ) ) ) {
+        if ( (sourceFile == null) || (!f.equals( sourceFile )) ) {
             if ( dbg_vm != null ) {
                 dbg_vm.terminate( new AbortedException( 0, null ) );
                 dbg_vm = null;
@@ -92,13 +95,14 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         }
         breakpoints.clear();
         boolean rs = sourceFile.exists() && sourceFile.isFile();
-        currentState = ( rs ) ? DebugState.NOT_RUNNING : DebugState.NOT_LOADED;
+        currentState = (rs) ? DebugState.NOT_RUNNING : DebugState.NOT_LOADED;
         if ( !rs )
             sourceText.setText( "" );
-        else
+        else {
             sourceText.setText( readFromFile( sourceFile ) );
-        doc.setParagraphAttributes( 0, doc.getEndPosition().getOffset(), normalStyle, false );
-
+            doc.setParagraphAttributes( 0, doc.getEndPosition().getOffset(), normalStyle, false );
+            sourceText.setSelectionStart( 0 );
+        }
         return rs;
     }
 
@@ -111,7 +115,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             FileInputStream in = new FileInputStream( f );
             in.read( bytes );
             in.close();
-        } catch ( IOException e ) {
+        } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
@@ -132,11 +136,11 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             for ( Integer i : breakpoints )
                 dbg_vm.setBreakpoint( i, true );
             return "OK";
-        } catch ( CompillingException ex ) {
-            Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
+        } catch (CompillingException ex) {
+//            Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
             return "compillation failed";
-        } catch ( IOException ex ) {
-            Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
+        } catch (IOException ex) {
+//            Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );;
             return "I/O exception";
         }
     }
@@ -160,7 +164,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         try {
             dbg_vm.cont();
             currentState = DebugState.RUNNING_AND_PERFORMING;
-        } catch ( IllegalStateException e ) {
+        } catch (IllegalStateException e) {
             correctState();
         }
         markBreakpoint( null, null, false );
@@ -198,13 +202,14 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
 
     private void setButtonsState () {
         synchronized ( lock ) {
-            switch ( currentState ) {
+            switch (currentState) {
                 case NOT_LOADED:
                     buttonRun.setEnabled( false );
                     buttonContinue.setEnabled( false );
                     buttonPause.setEnabled( false );
                     buttonToggle.setEnabled( false );
                     buttonKill.setEnabled( false );
+                    setStatusText( "Ready" );
                     break;
                 case NOT_RUNNING:
                     buttonRun.setEnabled( true );
@@ -212,6 +217,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     buttonPause.setEnabled( false );
                     buttonToggle.setEnabled( false );
                     buttonKill.setEnabled( false );
+                    setStatusText( "Ready" );
                     break;
                 case PAUSED:
                     buttonRun.setEnabled( false );
@@ -219,6 +225,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     buttonPause.setEnabled( false );
                     buttonToggle.setEnabled( true );
                     buttonKill.setEnabled( true );
+                    setStatusText( "At breakpoint" );
                     break;
                 case RUNNING_AND_PERFORMING:
                     buttonRun.setEnabled( false );
@@ -226,8 +233,10 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     buttonPause.setEnabled( true );
                     buttonToggle.setEnabled( true );
                     buttonKill.setEnabled( true );
+                    setStatusText( "Running" );
                     break;
                 default:
+                    setStatusText( "Internal Error" );
                     throw new IllegalStateException();
             }
         }
@@ -255,6 +264,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         buttonContinue = new javax.swing.JButton();
         buttonToggle = new javax.swing.JButton();
         buttonKill = new javax.swing.JButton();
+        jButton2 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -263,6 +273,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
+        sourceText.setFont(new java.awt.Font("Monospaced", 0, 12));
         jScrollPane1.setViewportView(sourceText);
 
         jTextField1.addKeyListener(new java.awt.event.KeyAdapter() {
@@ -271,6 +282,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
+        jButton1.setFont(new java.awt.Font("Dialog", 0, 8)); // NOI18N
         jButton1.setText("...");
         jButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -287,13 +299,13 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(statusLabel)
-                .addContainerGap(552, Short.MAX_VALUE))
+                .addContainerGap(491, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addComponent(statusLabel)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(3, Short.MAX_VALUE))
         );
 
         debugOutputWindow.setEditable(false);
@@ -338,35 +350,47 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
+        jButton2.setFont(new java.awt.Font("Dialog", 0, 8)); // NOI18N
+        jButton2.setText("About");
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 573, Short.MAX_VALUE)
-                .addContainerGap())
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(buttonRun)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(buttonPause)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(buttonContinue)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(buttonToggle)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 231, Short.MAX_VALUE)
-                .addComponent(buttonKill)
-                .addContainerGap())
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 573, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 524, Short.MAX_VALUE)
+                        .addContainerGap()
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 597, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 597, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGap(73, 73, 73))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 484, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton1)))
+                        .addComponent(jButton1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButton2))
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(buttonRun)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(buttonPause)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(buttonContinue)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(buttonToggle)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(buttonKill)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -375,7 +399,8 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton1))
+                    .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(buttonRun)
@@ -384,11 +409,11 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     .addComponent(buttonToggle)
                     .addComponent(buttonKill))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 237, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 211, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 145, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 17, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
 
         pack();
@@ -437,6 +462,10 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         kill();
     }//GEN-LAST:event_formWindowClosing
 
+    private void jButton2ActionPerformed (java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        new AboutDialog( this, true ).setVisible( true );
+    }//GEN-LAST:event_jButton2ActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -456,6 +485,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     private javax.swing.JButton buttonToggle;
     private javax.swing.JTextPane debugOutputWindow;
     private javax.swing.JButton jButton1;
+    private javax.swing.JButton jButton2;
     private javax.swing.JFileChooser jFileChooser1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
@@ -464,11 +494,13 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     private javax.swing.JTextPane sourceText;
     private javax.swing.JLabel statusLabel;
     // End of variables declaration//GEN-END:variables
+
     public void notifyDie ( DebugException dieException ) {
         synchronized ( lock ) {
             currentState = DebugState.NOT_RUNNING;
             setButtonsState();
             markBreakpoint( null, null, false );
+            notifyException( dieException );
         }
     }
 
@@ -479,13 +511,14 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             if ( e != null ) {
                 int pos = e.getInstruction().sourceIndex;
                 markBreakpoint( pos, null, true );
+                writeln( "paused at " + dbg_vm.getCpu().getCurrentAddress() + ", memory state: value at address " + dbg_vm.getMemory().getAddress() + " is " + dbg_vm.getMemory().export() );
             }
         }
     }
     private int lastCurrent = -1;
 
     private void markBreakpoint ( Integer pos, Boolean isBreakpoint,
-                                   boolean isCurrent ) {
+            boolean isCurrent ) {
         synchronized ( lock ) {
             if ( pos == null )
                 pos = lastCurrent;
@@ -521,14 +554,39 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             try {
                 String m = e.getMessage() + "\n";
                 consoleDoc.insertString( consoleDoc.getLength(), m, e.isFatal() ? redText : null );
-            } catch ( BadLocationException ex ) {
+            } catch (BadLocationException ex) {
                 Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
             }
         }
     }
+
+    private void notifyUnexpectedException ( Throwable t ) {
+        if ( t != null ) {
+            try {
+                String m = t.getMessage() + "\n";
+                consoleDoc.insertString( consoleDoc.getLength(), m, redText );
+            } catch (BadLocationException ex) {
+                Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
+            }
+        }
+    }
+
+    private void writeln( String str ) {
+        if( str != null ) {
+            try {
+                consoleDoc.insertString( consoleDoc.getLength(), str + "\n", null );
+            } catch (BadLocationException ex) {
+                Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
+            }
+        }
+    }
+
+    private void setStatusText( String txt ) {
+        statusLabel.setText( txt );
+    }
 }
 
- enum DebugState {
+enum DebugState {
 
     NOT_LOADED,
     NOT_RUNNING,
