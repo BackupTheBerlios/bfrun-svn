@@ -51,10 +51,10 @@ import java.util.TreeMap;
  */
 public class Main {
 
-    public static final String bf_version = "1.2b1";
+    public static final String bf_version = "1.2b2";
 
     protected static void help () {
-        System.out.println( "Brainf*ck interpreter. v." + bf_version + "\n" +
+        System.out.println( "Brainrunner - Brainf*ck interpreter. v." + bf_version + "\n" +
                 "This is Free software: no any waranties.\n" +
                 "dev by cy6erGn0m\n" +
                 "\nusage:\n" +
@@ -77,7 +77,7 @@ public class Main {
     }
 
     protected static void printUsage () {
-        System.out.println( "Brainf*ck interpreter. v." + bf_version + "\n" +
+        System.out.println( "Brainrunner - Brainf*ck interpreter. v." + bf_version + "\n" +
                 "This is Free software: no any waranties.\n" +
                 "dev by cy6erGn0m\n" +
                 "\nusage:\n" +
@@ -224,8 +224,6 @@ public class Main {
             cpu = new AltProcessor2( memory, bus, new AltcpuCompiller().compile( code ) );
         } else {
             cpu = new Processor( code, bus, memory );
-//            if ( !altcpu )
-//                ( (Processor) cpu ).setExpectOptimizedCode( !noOptimize );
         }
         return cpu;
     }
@@ -288,6 +286,17 @@ public class Main {
             perform();
         code = null;
     }
+
+    private void teardown() {
+        if( bus != null ) {
+            bus.teardown();
+            bus = null;
+        }
+        if( memory != null ) {
+            memory.teardown();
+            memory = null;
+        }
+    }
     
     public void runIt ( String[] args ) throws DebugException,
                                                CompillingException {
@@ -300,10 +309,10 @@ public class Main {
         else {
             correctOptions();
 
-            warmUp();
-            warmUp();
-            warmUp();
-            warmUp();
+//            warmUp();
+//            warmUp();
+//            warmUp();
+//            warmUp();
 
             String programText = fromFile( filename );
             if ( programText == null )
@@ -325,7 +334,7 @@ public class Main {
             if ( printStat )
                 printStat();
             
-            bus.teardown();
+            teardown();
         }
     }
 
@@ -349,8 +358,10 @@ public class Main {
         String s = null;
         try {
             File f = new File( path );
-            if ( !f.exists() )
+            if ( !f.exists() ) {
+                System.err.println( "File " + path + " not found" );
                 return null;
+            }
             int sz = (int) f.length();
             byte[] bytes = new byte[ sz ];
             fis = new FileInputStream( f );
