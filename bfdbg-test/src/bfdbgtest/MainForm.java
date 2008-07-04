@@ -282,6 +282,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         buttonStep = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Brainbugger - v.1.0M1");
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 formWindowClosing(evt);
