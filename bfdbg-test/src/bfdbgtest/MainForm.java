@@ -20,6 +20,7 @@
 package bfdbgtest;
 
 import cy6erGn0m.bf.compiller.CompillingException;
+import cy6erGn0m.bf.cpu.BfMemory;
 import cy6erGn0m.bf.exception.BreakpointException;
 import cy6erGn0m.bf.exception.DebugException;
 import cy6erGn0m.bf.debugger.DebugClient;
@@ -27,14 +28,23 @@ import cy6erGn0m.bf.debugger.Debugger;
 import cy6erGn0m.bf.exception.AbortedException;
 import cy6erGn0m.bf.vm.NullBus;
 import java.awt.Color;
+import java.awt.EventQueue;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
+import javax.swing.LookAndFeel;
+import javax.swing.UIManager;
+import javax.swing.UIManager.LookAndFeelInfo;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+import javax.swing.plaf.basic.BasicTextUI.BasicCaret;
+import javax.swing.table.TableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
@@ -78,7 +88,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         redText.addAttribute( StyleConstants.Foreground, Color.RED );
 
         String home = System.getProperty( "user.home" );
-        jTextField1.setText( home != null? home : "" );
+        jTextField1.setText( home != null ? home : "" );
     }
     protected Debugger dbg_vm = null;
     protected File sourceFile = null;
@@ -101,13 +111,15 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         else {
             sourceText.setText( readFromFile( sourceFile ) );
             doc.setParagraphAttributes( 0, doc.getEndPosition().getOffset(), normalStyle, false );
-            sourceText.setSelectionStart( 0 );
+            sourceText.setCaretPosition( 0 );
         }
         return rs;
     }
 
     private String readFromFile ( File f ) {
         if ( f == null || !f.exists() )
+            return null;
+        if( f.length() > 0x50000L )
             return null;
         int len = (int) f.length();
         byte[] bytes = new byte[ len ];
@@ -126,22 +138,22 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         try {
             currentState = DebugState.NOT_RUNNING;
             if ( sourceFile == null )
-                return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("source_file_not_set");
+                return java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "source_file_not_set" );
             if ( !sourceFile.exists() )
-                return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("source_file_not_found");
+                return java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "source_file_not_found" );
             dbg_vm = new Debugger( readFromFile( sourceFile ), 8, new NullBus() );
             dbg_vm.registerDebugClient( this );
             dbg_vm.begin();
             currentState = DebugState.PAUSED;
             for ( Integer i : breakpoints )
                 dbg_vm.setBreakpoint( i, true );
-            return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("OK");
+            return java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "OK" );
         } catch (CompillingException ex) {
 //            Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
-            return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("compillation_failed");
+            return java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "compillation_failed" );
         } catch (IOException ex) {
 //            Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );;
-            return java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("I/O_exception");
+            return java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "I/O_exception" );
         }
     }
 
@@ -201,59 +213,65 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     }
 
     private void setButtonsState () {
-        synchronized ( lock ) {
-            switch (currentState) {
-                case NOT_LOADED:
-                    jTextField1.setEnabled( true );
-                    jButton1.setEnabled( true );
-                    buttonRun.setEnabled( false );
-                    buttonContinue.setEnabled( false );
-                    buttonPause.setEnabled( false );
-                    buttonToggle.setEnabled( false );
-                    buttonKill.setEnabled( false );
-                    buttonStep.setEnabled( false );
-                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("Ready") );
-                    break;
-                case NOT_RUNNING:
-                    jTextField1.setEnabled( true );
-                    jButton1.setEnabled( true );
-                    buttonRun.setEnabled( true );
-                    buttonContinue.setEnabled( false );
-                    buttonPause.setEnabled( false );
-                    buttonToggle.setEnabled( false );
-                    buttonKill.setEnabled( false );
-                    buttonStep.setEnabled( false );
-                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("Ready") );
-                    break;
-                case PAUSED:
-                    jTextField1.setEnabled( false );
-                    jButton1.setEnabled( false );
-                    buttonRun.setEnabled( false );
-                    buttonContinue.setEnabled( true );
-                    buttonPause.setEnabled( false );
-                    buttonToggle.setEnabled( true );
-                    buttonKill.setEnabled( true );
-                    buttonStep.setEnabled( true );
-                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("At_breakpoint") );
-                    break;
-                case RUNNING_AND_PERFORMING:
-                    jTextField1.setEnabled( false );
-                    jButton1.setEnabled( false );
-                    buttonRun.setEnabled( false );
-                    buttonContinue.setEnabled( false );
-                    buttonPause.setEnabled( true );
-                    buttonToggle.setEnabled( true );
-                    buttonKill.setEnabled( true );
-                    buttonStep.setEnabled( false );
-                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("Running") );
-                    break;
-                default:
-                    setStatusText( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("Internal_Error") );
-                    kill();
-                    setButtonsState();
-                    throw new IllegalStateException();
+        EventQueue.invokeLater( new Runnable() {
+
+            public void run () {
+                synchronized ( lock ) {
+                switch (currentState) {
+                    case NOT_LOADED:
+                        jTextField1.setEnabled( true );
+                        jButton1.setEnabled( true );
+                        buttonRun.setEnabled( false );
+                        buttonContinue.setEnabled( false );
+                        buttonPause.setEnabled( false );
+                        buttonToggle.setEnabled( false );
+                        buttonKill.setEnabled( false );
+                        buttonStep.setEnabled( false );
+                        setStatusText( java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "Ready" ) );
+                        break;
+                    case NOT_RUNNING:
+                        jTextField1.setEnabled( true );
+                        jButton1.setEnabled( true );
+                        buttonRun.setEnabled( true );
+                        buttonContinue.setEnabled( false );
+                        buttonPause.setEnabled( false );
+                        buttonToggle.setEnabled( false );
+                        buttonKill.setEnabled( false );
+                        buttonStep.setEnabled( false );
+                        setStatusText( java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "Ready" ) );
+                        break;
+                    case PAUSED:
+                        jTextField1.setEnabled( false );
+                        jButton1.setEnabled( false );
+                        buttonRun.setEnabled( false );
+                        buttonContinue.setEnabled( true );
+                        buttonPause.setEnabled( false );
+                        buttonToggle.setEnabled( true );
+                        buttonKill.setEnabled( true );
+                        buttonStep.setEnabled( true );
+                        setStatusText( java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "At_breakpoint" ) );
+                        break;
+                    case RUNNING_AND_PERFORMING:
+                        jTextField1.setEnabled( false );
+                        jButton1.setEnabled( false );
+                        buttonRun.setEnabled( false );
+                        buttonContinue.setEnabled( false );
+                        buttonPause.setEnabled( true );
+                        buttonToggle.setEnabled( true );
+                        buttonKill.setEnabled( true );
+                        buttonStep.setEnabled( false );
+                        setStatusText( java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "Running" ) );
+                        break;
+                    default:
+                        setStatusText( java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "Internal_Error" ) );
+                        kill();
+                        setButtonsState();
+                        throw new IllegalStateException();
+                }
             }
-        }
+            }
+        });
+        
     }
 
     /** This method is called from within the constructor to
@@ -280,9 +298,13 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         buttonKill = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
         buttonStep = new javax.swing.JButton();
+        jPanel2 = new javax.swing.JPanel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        memoryDumpTable = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("Brainbugger - v.1.0M1");
+        setTitle("Brainbugger - v.1.0M2");
+        setLocationByPlatform(true);
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 formWindowClosing(evt);
@@ -290,6 +312,15 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         });
 
         sourceText.setFont(new java.awt.Font("Monospaced", 0, 12));
+        sourceText.setCaret(new BasicCaret()
+        );
+        sourceText.addInputMethodListener(new java.awt.event.InputMethodListener() {
+            public void caretPositionChanged(java.awt.event.InputMethodEvent evt) {
+            }
+            public void inputMethodTextChanged(java.awt.event.InputMethodEvent evt) {
+                sourceTextInputMethodTextChanged(evt);
+            }
+        });
         jScrollPane1.setViewportView(sourceText);
 
         jTextField1.addKeyListener(new java.awt.event.KeyAdapter() {
@@ -316,7 +347,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(statusLabel)
-                .addContainerGap(491, Short.MAX_VALUE))
+                .addContainerGap(488, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -383,29 +414,50 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
+        jScrollPane3.setWheelScrollingEnabled(false);
+
+        memoryDumpTable.setModel(new MemoryDumpModel());
+        memoryDumpTable.setColumnSelectionAllowed(true);
+        memoryDumpTable.setFillsViewportHeight(true);
+        memoryDumpTable.setShowHorizontalLines(false);
+        memoryDumpTable.getTableHeader().setReorderingAllowed(false);
+        jScrollPane3.setViewportView(memoryDumpTable);
+        memoryDumpTable.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 594, Short.MAX_VALUE)
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 57, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 597, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 597, Short.MAX_VALUE))
-                    .addGroup(layout.createSequentialGroup()
+            .addGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addGap(73, 73, 73))
-                    .addGroup(layout.createSequentialGroup()
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addContainerGap()
-                        .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 484, Short.MAX_VALUE)
+                        .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 481, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButton1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButton2))
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 594, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
                         .addContainerGap()
                         .addComponent(buttonRun)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -417,7 +469,12 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(buttonToggle)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(buttonKill)))
+                        .addComponent(buttonKill))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 594, Short.MAX_VALUE)
+                            .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -425,9 +482,9 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(buttonRun)
@@ -437,9 +494,11 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     .addComponent(buttonKill)
                     .addComponent(buttonStep))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 211, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 192, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 145, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 17, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
@@ -456,7 +515,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
 
     private void buttonRunActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonRunActionPerformed
         String rs = tryRun();
-        if ( !rs.equals( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("OK") ) )
+        if ( !rs.equals( java.util.ResourceBundle.getBundle( "bfdbgtest/Bundle" ).getString( "OK" ) ) )
             statusLabel.setText( rs );
         setButtonsState();
     }//GEN-LAST:event_buttonRunActionPerformed
@@ -495,22 +554,48 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void buttonStepActionPerformed (java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonStepActionPerformed
-        if( dbg_vm != null ) {
+        if ( dbg_vm != null ) {
             dbg_vm.step();
         }
     }//GEN-LAST:event_buttonStepActionPerformed
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main ( String args[] ) {
+    private void sourceTextInputMethodTextChanged (java.awt.event.InputMethodEvent evt) {//GEN-FIRST:event_sourceTextInputMethodTextChanged
+        
+    }//GEN-LAST:event_sourceTextInputMethodTextChanged
+
+
+    public static void main ( final String args[] ) {
+
+        try {
+            String toBeFound = args.length == 0? "Nimbus" : args[0];
+            String found = null;
+            LookAndFeelInfo[] lfs = UIManager.getInstalledLookAndFeels();
+            if( lfs != null ) {
+                for( LookAndFeelInfo lf : lfs ) {
+                    if( lf != null && lf.getName().equals( toBeFound ) ) {
+                        found = lf.getClassName();
+                        break;
+                    }
+                }
+            }
+            if( found != null ) {
+                LookAndFeel lf = (LookAndFeel) Class.forName( found ).newInstance();
+                if( lf.isSupportedLookAndFeel() )
+                    UIManager.setLookAndFeel( lf );
+            }
+        } catch( Exception e ) {
+            e.printStackTrace();
+        }
+
         java.awt.EventQueue.invokeLater( new Runnable() {
 
             public void run () {
                 new MainForm().setVisible( true );
             }
-        } );
+        });
     }
+
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton buttonContinue;
     private javax.swing.JButton buttonKill;
@@ -523,9 +608,12 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     private javax.swing.JButton jButton2;
     private javax.swing.JFileChooser jFileChooser1;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JTextField jTextField1;
+    private javax.swing.JTable memoryDumpTable;
     private javax.swing.JTextPane sourceText;
     private javax.swing.JLabel statusLabel;
     // End of variables declaration//GEN-END:variables
@@ -536,6 +624,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             setButtonsState();
             markBreakpoint( null, null, false );
             notifyException( dieException );
+            model.validateDump();
         }
     }
 
@@ -543,55 +632,73 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         synchronized ( lock ) {
             currentState = DebugState.PAUSED;
             setButtonsState();
+            model.validateDump();
             if ( e != null ) {
                 int pos = e.getInstruction().sourceIndex;
                 markBreakpoint( pos, null, true );
-                writeln( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("paused_at_") + dbg_vm.getCpu().getCurrentAddress() + java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString(",_memory_state:_value_at_address_") + dbg_vm.getMemory().getAddress() + java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("_is_") + dbg_vm.getMemory().export() );
+                //writeln( java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("paused_at_") + dbg_vm.getCpu().getCurrentAddress() + java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString(",_memory_state:_value_at_address_") + dbg_vm.getMemory().getAddress() + java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("_is_") + dbg_vm.getMemory().export() );
             }
         }
     }
     private int lastCurrent = -1;
 
-    private void markBreakpoint ( Integer pos, Boolean isBreakpoint,
-            boolean isCurrent ) {
-        synchronized ( lock ) {
-            if ( pos == null )
-                pos = lastCurrent;
-            if ( pos >= 0 ) {
-                Style newStyle;
-                if ( isBreakpoint == null )
-                    isBreakpoint = breakpoints.contains( pos );
-                if ( isBreakpoint ) {
-                    if ( isCurrent )
-                        newStyle = bpCurrStyle;
-                    else
-                        newStyle = bpStyle;
-                } else {
-                    if ( isCurrent )
-                        newStyle = runPointStyle;
-                    else
-                        newStyle = normalStyle;
-                }
-                doc.setCharacterAttributes( pos, 1, newStyle, true );
-                if ( isCurrent ) {
-                    if ( pos != lastCurrent && lastCurrent != -1 ) {
-                        newStyle = breakpoints.contains( lastCurrent ) ? bpStyle : normalStyle;
-                        doc.setCharacterAttributes( lastCurrent, 1, newStyle, true );
+    private void markBreakpoint ( final Integer _pos, final Boolean _isBreakpoint,
+            final boolean isCurrent ) {
+        EventQueue.invokeLater( new Runnable() {
+
+            public void run () {
+                Integer pos = _pos;
+                Boolean isBreakpoint = _isBreakpoint;
+                synchronized ( lock ) {
+                    if ( pos == null )
+                        pos = lastCurrent;
+                    if ( pos >= 0 && pos < doc.getLength() ) {
+                        Style newStyle;
+                        if ( isBreakpoint == null )
+                            isBreakpoint = breakpoints.contains( pos );
+                        if ( isBreakpoint ) {
+                            if ( isCurrent )
+                                newStyle = bpCurrStyle;
+                            else
+                                newStyle = bpStyle;
+                        } else {
+                            if ( isCurrent )
+                                newStyle = runPointStyle;
+                            else
+                                newStyle = normalStyle;
+                        }
+                        doc.setCharacterAttributes( pos, 1, newStyle, true );
+                        sourceText.setCaretPosition( pos );
+                        if ( isCurrent ) {
+                            if ( pos != lastCurrent && lastCurrent != -1 ) {
+                                newStyle = breakpoints.contains( lastCurrent ) ? bpStyle : normalStyle;
+                                doc.setCharacterAttributes( lastCurrent, 1, newStyle, true );
+                            }
+                            lastCurrent = pos;
+                        }
                     }
-                    lastCurrent = pos;
                 }
             }
-        }
+        });
+        
     }
 
-    public void notifyException ( DebugException e ) {
+    public void notifyException ( final DebugException e ) {
         if ( e != null ) {
-            try {
-                String m = e.getMessage() + java.util.ResourceBundle.getBundle("bfdbgtest/Bundle").getString("\n");
-                consoleDoc.insertString( consoleDoc.getLength(), m, e.isFatal() ? redText : null );
-            } catch (BadLocationException ex) {
-                Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
-            }
+            EventQueue.invokeLater( new Runnable() {
+
+                public void run () {
+                    try {
+                        String m = e.getMessage() + "\n";
+                        consoleDoc.insertString( consoleDoc.getLength(), m, e.isFatal() ? redText : null );
+                    } catch (BadLocationException ex) {
+                        Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
+                    }
+                    setButtonsState();
+                    model.validateDump();
+                }
+            });
+            
         }
     }
 
@@ -606,18 +713,105 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         }
     }
 
-    private void writeln( String str ) {
+    private void writeln( final String str ) {
         if( str != null ) {
-            try {
-                consoleDoc.insertString( consoleDoc.getLength(), str + "\n", null );
-            } catch (BadLocationException ex) {
-                Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
-            }
+            EventQueue.invokeLater( new Runnable() {
+
+                public void run () {
+                    try {
+                        consoleDoc.insertString( consoleDoc.getLength(), str + "\n", null );
+                        debugOutputWindow.setCaretPosition( consoleDoc.getLength() );
+                    } catch (BadLocationException ex) {
+                        Logger.getLogger( MainForm.class.getName() ).log( Level.SEVERE, null, ex );
+                    }
+                }
+
+            });
+            
         }
     }
 
     private void setStatusText( String txt ) {
         statusLabel.setText( txt );
+    }
+
+    private MemoryDumpModel model ;
+
+    class MemoryDumpModel implements TableModel {
+        private Vector<TableModelListener> listeners = new Vector<TableModelListener>();
+
+        public MemoryDumpModel () {
+            model = this;
+        }
+
+        public int getRowCount () {
+            return 1;
+        }
+
+        public int getColumnCount () {
+            return 11;
+        }
+
+        public String getColumnName ( int columnIndex ) {
+            columnIndex -= 5;
+            if( columnIndex < 0 )
+                return Integer.toString( columnIndex );
+            else
+                return "+" + columnIndex;
+        }
+
+        public Class<?> getColumnClass ( int columnIndex ) {
+            return Integer.class;
+        }
+
+        public boolean isCellEditable ( int rowIndex, int columnIndex ) {
+            return false;
+        }
+
+        public synchronized Object getValueAt ( int rowIndex, int columnIndex ) {
+            if( rowIndex > 0 )
+                return null;
+            if( dbg_vm == null )
+                return null;
+            columnIndex -= 5;
+            int value = 0;
+            BfMemory memory = dbg_vm.getMemory();
+            if( columnIndex > 0 )
+                memory.forward( columnIndex );
+            else if( columnIndex < 0 )
+                memory.backward( -columnIndex );
+            value = memory.export();
+            if( columnIndex > 0 )
+                memory.backward( columnIndex );
+            else if( columnIndex < 0 )
+                memory.forward( -columnIndex );
+            return Integer.valueOf( value );
+        }
+
+        public void setValueAt ( Object aValue, int rowIndex, int columnIndex ) {
+            throw new UnsupportedOperationException( "Not supported." );
+        }
+
+        public void addTableModelListener ( TableModelListener l ) {
+            listeners.add( l );
+        }
+
+        public void removeTableModelListener ( TableModelListener l ) {
+            listeners.remove( l );
+        }
+
+        public void validateDump() {
+
+                EventQueue.invokeLater( new Runnable() {
+
+                    public void run () {
+                        for( TableModelListener l : listeners ) {
+                            l.tableChanged( new TableModelEvent( model, 0 ) );
+                        }
+                    }
+
+                });
+        }
     }
 }
 
@@ -628,4 +822,5 @@ enum DebugState {
     RUNNING_AND_PERFORMING,
     PAUSED
 }
+
 
