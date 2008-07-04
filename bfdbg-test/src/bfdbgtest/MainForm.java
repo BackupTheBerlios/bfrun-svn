@@ -204,39 +204,53 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         synchronized ( lock ) {
             switch (currentState) {
                 case NOT_LOADED:
+                    jTextField1.setEnabled( true );
+                    jButton1.setEnabled( true );
                     buttonRun.setEnabled( false );
                     buttonContinue.setEnabled( false );
                     buttonPause.setEnabled( false );
                     buttonToggle.setEnabled( false );
                     buttonKill.setEnabled( false );
+                    buttonStep.setEnabled( false );
                     setStatusText( "Ready" );
                     break;
                 case NOT_RUNNING:
+                    jTextField1.setEnabled( true );
+                    jButton1.setEnabled( true );
                     buttonRun.setEnabled( true );
                     buttonContinue.setEnabled( false );
                     buttonPause.setEnabled( false );
                     buttonToggle.setEnabled( false );
                     buttonKill.setEnabled( false );
+                    buttonStep.setEnabled( false );
                     setStatusText( "Ready" );
                     break;
                 case PAUSED:
+                    jTextField1.setEnabled( false );
+                    jButton1.setEnabled( false );
                     buttonRun.setEnabled( false );
                     buttonContinue.setEnabled( true );
                     buttonPause.setEnabled( false );
                     buttonToggle.setEnabled( true );
                     buttonKill.setEnabled( true );
+                    buttonStep.setEnabled( true );
                     setStatusText( "At breakpoint" );
                     break;
                 case RUNNING_AND_PERFORMING:
+                    jTextField1.setEnabled( false );
+                    jButton1.setEnabled( false );
                     buttonRun.setEnabled( false );
                     buttonContinue.setEnabled( false );
                     buttonPause.setEnabled( true );
                     buttonToggle.setEnabled( true );
                     buttonKill.setEnabled( true );
+                    buttonStep.setEnabled( false );
                     setStatusText( "Running" );
                     break;
                 default:
                     setStatusText( "Internal Error" );
+                    kill();
+                    setButtonsState();
                     throw new IllegalStateException();
             }
         }
@@ -265,6 +279,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         buttonToggle = new javax.swing.JButton();
         buttonKill = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
+        buttonStep = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -282,7 +297,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
-        jButton1.setFont(new java.awt.Font("Dialog", 0, 8)); // NOI18N
+        jButton1.setFont(new java.awt.Font("Dialog", 0, 8));
         jButton1.setText("...");
         jButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -350,11 +365,19 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
-        jButton2.setFont(new java.awt.Font("Dialog", 0, 8)); // NOI18N
+        jButton2.setFont(new java.awt.Font("Dialog", 0, 8));
         jButton2.setText("About");
         jButton2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton2ActionPerformed(evt);
+            }
+        });
+
+        buttonStep.setText("Step");
+        buttonStep.setEnabled(false);
+        buttonStep.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                buttonStepActionPerformed(evt);
             }
         });
 
@@ -388,6 +411,8 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(buttonContinue)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(buttonStep)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(buttonToggle)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(buttonKill)))
@@ -407,7 +432,8 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                     .addComponent(buttonPause)
                     .addComponent(buttonContinue)
                     .addComponent(buttonToggle)
-                    .addComponent(buttonKill))
+                    .addComponent(buttonKill)
+                    .addComponent(buttonStep))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 211, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -466,6 +492,12 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
         new AboutDialog( this, true ).setVisible( true );
     }//GEN-LAST:event_jButton2ActionPerformed
 
+    private void buttonStepActionPerformed (java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonStepActionPerformed
+        if( dbg_vm != null ) {
+            dbg_vm.step();
+        }
+    }//GEN-LAST:event_buttonStepActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -482,6 +514,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     private javax.swing.JButton buttonKill;
     private javax.swing.JButton buttonPause;
     private javax.swing.JButton buttonRun;
+    private javax.swing.JButton buttonStep;
     private javax.swing.JButton buttonToggle;
     private javax.swing.JTextPane debugOutputWindow;
     private javax.swing.JButton jButton1;

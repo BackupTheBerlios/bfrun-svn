@@ -59,6 +59,8 @@
                       <EmptySpace max="-2" attributes="0"/>
                       <Component id="buttonContinue" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
+                      <Component id="buttonStep" min="-2" max="-2" attributes="0"/>
+                      <EmptySpace max="-2" attributes="0"/>
                       <Component id="buttonToggle" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                       <Component id="buttonKill" min="-2" max="-2" attributes="0"/>
@@ -84,6 +86,7 @@
                   <Component id="buttonContinue" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="buttonToggle" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="buttonKill" alignment="3" min="-2" max="-2" attributes="0"/>
+                  <Component id="buttonStep" alignment="3" min="-2" max="-2" attributes="0"/>
               </Group>
               <EmptySpace max="-2" attributes="0"/>
               <Component id="jScrollPane1" pref="211" max="32767" attributes="0"/>
@@ -224,6 +227,15 @@
       </Properties>
       <Events>
         <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jButton2ActionPerformed"/>
+      </Events>
+    </Component>
+    <Component class="javax.swing.JButton" name="buttonStep">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="Step"/>
+        <Property name="enabled" type="boolean" value="false"/>
+      </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="buttonStepActionPerformed"/>
       </Events>
     </Component>
   </SubComponents>
