@@ -46,10 +46,22 @@ public class ProcessorTest {
         return true;
     }
     
-    public static int[] perform( String code ) throws CompillingException, DebugException {
+    private static int[] perform( String code, int level ) throws CompillingException, DebugException {
         OptimizedCompiller c = new OptimizedCompiller();
+        c.setOptimizationLevel( level );
         Instruction is[] = c.compile( code );
         BfMemory m = new Memory8();
+        IOBus b = new NullBus();
+        Processor p = new Processor( is, b, m );
+        p.perform();
+        return m.dump();
+    }
+
+    private static int[] perform2ndmem( String code, int level ) throws CompillingException, DebugException {
+        OptimizedCompiller c = new OptimizedCompiller();
+        c.setOptimizationLevel( level );
+        Instruction is[] = c.compile( code );
+        BfMemory m = new Memory8_2nd();
         IOBus b = new NullBus();
         Processor p = new Processor( is, b, m );
         p.perform();
@@ -58,8 +70,88 @@ public class ProcessorTest {
     
     @Test
     public void testSimple() throws CompillingException, DebugException {
-        String code = "++++[->++<]";
-        int[] result = perform(code);
+        String code = "++++[->++<].++.";
+        int[] result = perform(code, 0);
+        int[] expected = new int[ result.length ];
+        expected[ 0 ] = 2;
+        expected[ 1 ] = 8;
+        assertTrue( dumpEquals(result, expected) );
+    }
+
+    @Test
+    public void testSimple1_1() throws CompillingException, DebugException {
+        String code = "++++[->++<[-][-]].>++";
+        int[] result = perform(code, 0);
+        int[] expected = new int[ result.length ];
+        expected[ 0 ] = 0;
+        expected[ 1 ] = 4;
+        assertTrue( dumpEquals(result, expected) );
+    }
+
+    @Test
+    public void testSimple2() throws CompillingException, DebugException {
+        String code = "++++[->++<].";
+        int[] result = perform(code, 1);
+        int[] expected = new int[ result.length ];
+        expected[ 0 ] = 0;
+        expected[ 1 ] = 8;
+        assertTrue( dumpEquals(result, expected) );
+    }
+
+    @Test
+    public void testSimple3() throws CompillingException, DebugException {
+        String code = "++++[->++<].";
+        int[] result = perform(code, 2);
+        int[] expected = new int[ result.length ];
+        expected[ 0 ] = 0;
+        expected[ 1 ] = 8;
+        assertTrue( dumpEquals(result, expected) );
+    }
+
+    @Test
+    public void testSimple4() throws CompillingException, DebugException {
+        String code = "++++[->++<].";
+        int[] result = perform(code, 3);
+        int[] expected = new int[ result.length ];
+        expected[ 0 ] = 0;
+        expected[ 1 ] = 8;
+        assertTrue( dumpEquals(result, expected) );
+    }
+
+    @Test
+    public void testSimple5() throws CompillingException, DebugException {
+        String code = "++++[->++<].";
+        int[] result = perform2ndmem(code, 0);
+        int[] expected = new int[ result.length ];
+        expected[ 0 ] = 0;
+        expected[ 1 ] = 8;
+        assertTrue( dumpEquals(result, expected) );
+    }
+
+    @Test
+    public void testSimple6() throws CompillingException, DebugException {
+        String code = "++++[->++<].";
+        int[] result = perform2ndmem(code, 1);
+        int[] expected = new int[ result.length ];
+        expected[ 0 ] = 0;
+        expected[ 1 ] = 8;
+        assertTrue( dumpEquals(result, expected) );
+    }
+
+    @Test
+    public void testSimple7() throws CompillingException, DebugException {
+        String code = "++++[->++<].";
+        int[] result = perform2ndmem(code, 2);
+        int[] expected = new int[ result.length ];
+        expected[ 0 ] = 0;
+        expected[ 1 ] = 8;
+        assertTrue( dumpEquals(result, expected) );
+    }
+
+    @Test
+    public void testSimple8() throws CompillingException, DebugException {
+        String code = "++++[->++<].";
+        int[] result = perform2ndmem(code, 3);
         int[] expected = new int[ result.length ];
         expected[ 0 ] = 0;
         expected[ 1 ] = 8;

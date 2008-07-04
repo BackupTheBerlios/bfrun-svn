@@ -128,7 +128,20 @@ public class Memory8_2nd implements BfMemory {
     }
 
     public int[] dump () {
-        throw new UnsupportedOperationException( "Not supported yet." );
+        // TODO: what about negative addresses?
+
+        MemoryUnit u;
+        int size = 0;
+        for( u = zeroUnit; u != null; u = u.right )
+            size += u.length;
+
+        int[] dump = new int[size];
+        int ptr = 0;
+        for( u = zeroUnit; u != null; u = u.right ) {
+            for( int i = 0, m = u.length; i < m; ++i, ++ptr )
+                dump[ptr] = u.data[i];
+        }
+        return dump;
     }
 
     public int getAddress () {
@@ -250,6 +263,11 @@ public class Memory8_2nd implements BfMemory {
         currentOffset = offset;
         currentData = current.data;
         currentLength = current.length;
+    }
+
+    @Override
+    public String toString () {
+        return "address is " + getAddress() + " and value is " + export();
     }
 
 }

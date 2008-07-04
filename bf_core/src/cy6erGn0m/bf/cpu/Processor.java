@@ -22,9 +22,12 @@ package cy6erGn0m.bf.cpu;
 import cy6erGn0m.bf.exception.BreakpointException;
 import cy6erGn0m.bf.exception.FatalException;
 import cy6erGn0m.bf.exception.DebugException;
+import cy6erGn0m.bf.exception.EndOfCodeException;
 import cy6erGn0m.bf.iset.Instruction;
+import cy6erGn0m.bf.iset.InstructionSet;
 import cy6erGn0m.bf.vm.NullBus;
 import java.io.IOException;
+import java.util.Stack;
 
 /**
  *
@@ -36,26 +39,28 @@ public class Processor implements BfCpu {
     protected BfMemory memory;
     protected final Instruction[] instructions;
     protected int CP = 0;
+    protected Instruction _currentInstruction;
 
     public Processor ( Instruction[] instructions, IOBus bus, BfMemory memory ) {
         if ( (this.instructions = instructions) == null )
             throw new NullPointerException( "instructions array should not be null" );
         this.bus = (bus != null) ? bus : new NullBus();
         this.memory = (memory != null) ? memory : new Memory8();
-        initJumpsTable();
+        _currentInstruction = instructions.length > 0? instructions[0] : new Instruction( InstructionSet.NONE, 0, 0 );
+//        initJumpsTable();
     }
     protected boolean interrupted = false;
 
     public void interrupt () {
         interrupted = true;
     }
-    Instruction _currentInstruction = null;
 
     protected void performOne () throws DebugException, IOException {
         final Instruction currentInstruction = _currentInstruction;
         switch (currentInstruction.ival) {
             case Instruction.JUMP_BACKWARD_CODE:
-                jumpBackward();
+                if( memory.isNonZero() )
+                    CP = jumpBackward(CP);
                 break;
             case Instruction.DEC_CODE:
                 memory.decrease();
@@ -89,7 +94,8 @@ public class Processor implements BfCpu {
                 }
                 break;
             case Instruction.JUMP_FORWARD_CODE:
-                jumpForward();
+                if( memory.isZero() )
+                    CP = jumpForward(CP);
                 break;
             case Instruction.ZERO_CODE:
                 memory.zero();
@@ -107,7 +113,6 @@ public class Processor implements BfCpu {
                     memory.increaseAt( currentInstruction.op );
                 else
                     memory.increaseAt( currentInstruction.extOps, currentInstruction.extOps2 );
-                //memory.zero();
                 break;
             case Instruction.OUT_CODE:
                 bus.out( memory.export() );
@@ -161,14 +166,14 @@ public class Processor implements BfCpu {
                             memory.increase();
                             break;
                         case Instruction.JUMP_BACKWARD_CODE:
-                            jumpBackward();
+                            if( memory.isNonZero() )
+                                cp = jumpBackward(cp);
                             break;
                         case Instruction.DATA_MOVE:
                             if ( currentInstruction.op != 0 )
                                 memory.increaseAt( currentInstruction.op );
                             else
                                 memory.increaseAt( currentInstruction.extOps, currentInstruction.extOps2 );
-//                                memory.zero();
                             break;
                         case Instruction.FORWARD_CODE:
                             memory.forward1();
@@ -177,7 +182,8 @@ public class Processor implements BfCpu {
                             memory.backward1();
                             break;
                         case Instruction.JUMP_FORWARD_CODE:
-                            jumpForward();
+                            if( memory.isZero() )
+                                cp = jumpForward(cp);
                             break;
                         case Instruction.IN_CODE:
                             memory.set( bus.in() );
@@ -185,12 +191,10 @@ public class Processor implements BfCpu {
                         default:
                             throw new FatalException( cp, currentInstruction, "unknown instruction" );
                     }
-                } while ( ++cp < m && --iters < 1000 );
+                } while ( ++cp < m && --iters < 500 );
             }
         } catch (IOException e) {
             throw new FatalException( cp, currentInstruction, "I/O problem: " + e.getMessage() );
-        } catch (IndexOutOfBoundsException e) {
-            throw new FatalException( cp, (currentInstruction = instructions[cp]), e.getMessage() );
         } finally {
             CP = cp;
             _currentInstruction = currentInstruction;
@@ -202,7 +206,9 @@ public class Processor implements BfCpu {
             while ( !isEnd() && !interrupted )
                 performSomething();
         } catch (IndexOutOfBoundsException e) {
-            throw new FatalException( CP, (_currentInstruction = instructions[CP]), e.getMessage() );
+            throw new FatalException( CP, (_currentInstruction = instructions[CP]), "Internal interpreter error. " + e.getMessage() );
+        } finally {
+            interrupted = false;
         }
     }
 
@@ -216,8 +222,11 @@ public class Processor implements BfCpu {
             if ( !isEnd() ) {
                 _currentInstruction = instructions[CP];
                 performOne();
-                if ( ++CP < instructions.length )
-                    throw new BreakpointException( CP, instructions[CP] );
+                if( isEnd() )
+                    throw new EndOfCodeException( CP, _currentInstruction );
+                if( CP < 0 )
+                    throw new FatalException( CP, _currentInstruction, "Internal interpreter error: code pointer is negative" );
+                throw new BreakpointException( CP, instructions[CP] );
             }
         } catch (DebugException ex) {
             ex.setAddress( CP );
@@ -243,47 +252,49 @@ public class Processor implements BfCpu {
         }
     }
 
-    protected void jumpForward () throws DebugException {
-        int cp = CP;
-        if ( memory.isZero() ) {
-            int c = jumpsTable[cp];
-            if ( c != -1 ) {
-                cp = c;
-            } else {
-                int level = 0;
-                int oldcp = cp++;
-                final int m = instructions.length;
-                loop:
-                for (; cp < m; cp++ ) {
-                    switch (instructions[cp].ival) {
-                        case Instruction.JUMP_FORWARD_CODE:
-                            level++;
-                            break;
-                        case Instruction.JUMP_BACKWARD_CODE:
-                            if ( level == 0 )
-                                break loop;
-                            level--;
-                            break;
-                        case Instruction.JUMP_ON_ZERO_CODE:
-                        case Instruction.JUMP_ON_NONZERO_CODE:
-                            throw new FatalException( cp, instructions[cp], "mixed jumps forbidden" );
-                    }
+    protected int jumpForward ( int cp ) throws DebugException {
+        initJumpsTable();
+        int c = jumpsTable[cp];
+        if ( c != -1 ) {
+            cp = c;
+        } else {
+            int level = 0;
+            Stack<Integer> jumps = new Stack<Integer> ();
+            int oldcp = cp++;
+            final int m = instructions.length;
+            loop:
+            for (; cp < m; cp++ ) {
+                switch (instructions[cp].ival) {
+                    case Instruction.JUMP_FORWARD_CODE:
+                        level++;
+                        jumps.push( cp );
+                        break;
+                    case Instruction.JUMP_BACKWARD_CODE:
+                        if ( level == 0 )
+                            break loop;
+                        level--;
+                        jumpsTable[cp] = jumps.pop();
+                        break;
+                    case Instruction.JUMP_ON_ZERO_CODE:
+                    case Instruction.JUMP_ON_NONZERO_CODE:
+                        throw new FatalException( cp, instructions[cp], "mixed jumps forbidden" );
                 }
-
-                if ( cp >= m ) {
-                    cp = oldcp;
-                    throw new FatalException( oldcp, instructions[oldcp], "illegal forward jump" );
-                }
-                jumpsTable[oldcp] = cp;
-                jumpsTable[cp] = oldcp;
             }
-            CP = cp;
+
+            if ( cp >= m || !jumps.isEmpty() ) {
+                cp = oldcp;
+                throw new FatalException( oldcp, instructions[oldcp], "illegal forward jump" );
+            }
+            jumpsTable[oldcp] = cp;
+            jumpsTable[cp] = oldcp;
         }
+        return cp;
     }
 
-    protected void jumpBackward () throws DebugException {
-        int cp = CP;
+    protected int jumpBackward (int cp) throws DebugException {
+        initJumpsTable();
         int level = 0;
+        Stack<Integer> jumps = new Stack<Integer>();
         final int oldcp = cp--;
         if ( oldcp > 0 ) {
             loop:
@@ -291,22 +302,24 @@ public class Processor implements BfCpu {
                 switch (instructions[cp].ival) {
                     case Instruction.JUMP_BACKWARD_CODE:
                         level++;
+                        jumps.push( cp );
                         break;
                     case Instruction.JUMP_FORWARD_CODE:
                         if ( level == 0 )
                             break loop;
+                        jumpsTable[cp] = jumps.pop();
                         level--;
                         break;
                 }
             } while ( --cp >= 0 );
         }
-        if ( cp < 0 ) {
+        if ( cp <  0 || !jumps.isEmpty() ) {
             cp = oldcp;
             throw new FatalException( oldcp, instructions[oldcp], "illegal forward jump" );
         }
         jumpsTable[oldcp] = cp;
         jumpsTable[cp] = oldcp;
-        CP = cp;
+        return cp;
     }
 
     public Instruction getCurrentInstruction () {

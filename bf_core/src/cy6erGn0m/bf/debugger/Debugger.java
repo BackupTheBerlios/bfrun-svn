@@ -27,9 +27,9 @@ import cy6erGn0m.bf.exception.DebugException;
 import cy6erGn0m.bf.cpu.DebugProcessor;
 import cy6erGn0m.bf.exception.FatalException;
 import cy6erGn0m.bf.cpu.IOBus;
-import cy6erGn0m.bf.cpu.Memory16;
+import cy6erGn0m.bf.cpu.Memory16_2nd;
 import cy6erGn0m.bf.cpu.Memory32;
-import cy6erGn0m.bf.cpu.Memory8;
+import cy6erGn0m.bf.cpu.Memory8_2nd;
 import cy6erGn0m.bf.exception.AbortedException;
 import cy6erGn0m.bf.exception.EndOfCodeException;
 import cy6erGn0m.bf.iset.Instruction;
@@ -57,11 +57,11 @@ public class Debugger extends Thread {
         SimpleCompiller c = new SimpleCompiller();
         compiled = c.compile( this.sourceCode );
         if ( bits == 16 )
-            memory = new Memory16();
+            memory = new Memory16_2nd();
         else if ( bits == 32 )
             memory = new Memory32();
         else
-            memory = new Memory8();
+            memory = new Memory8_2nd();
         this.bus = bus;
         cpu = new DebugProcessor( compiled, bus, memory );
         start();
@@ -80,52 +80,52 @@ public class Debugger extends Thread {
             cpu.clearBreakpointAt( index );
         return oldstate;
     }
-    
-    public boolean getBreakpoint( int index ) {
+
+    public boolean getBreakpoint ( int index ) {
         return cpu.isBreakpointAt( index );
     }
-    
     protected boolean running = false;   // запущено
     protected boolean performing = false;  // выполняется в данный момент
     protected boolean exitRequested = false;
-    protected Integer notRunning = new Integer( 0 );
-    protected Integer whileRunning = new Integer( 0 );
+    protected final Object notRunning = new Object();
+    protected final Object whileRunning = new Object();
 
-    private void notifyDie( DebugException e ) {
-        for( DebugClient client : clients ) {
+    private void notifyDie ( DebugException e ) {
+        for ( DebugClient client : clients ) {
             try {
                 client.notifyDie( null );
-            } catch( Throwable t ) {
+            } catch (Throwable t) {
                 t.printStackTrace();
             }
         }
     }
-    
-    private void notifyBreak( BreakpointException e ) {
-        for( DebugClient client : clients ) {
+
+    private void notifyBreak ( BreakpointException e ) {
+        for ( DebugClient client : clients ) {
             try {
                 client.notifyBreakpoint( e );
-            } catch( Throwable t ) {
+            } catch (Throwable t) {
                 t.printStackTrace();
             }
         }
     }
-    
-    private void notifyException( final DebugException e ) {
+
+    private void notifyException ( final DebugException e ) {
         (new Thread() {
+
             @Override
-            public void run() {
-                for( DebugClient client : clients ) {
+            public void run () {
+                for ( DebugClient client : clients ) {
                     try {
                         client.notifyException( e );
-                    } catch( Throwable t ) {
+                    } catch (Throwable t) {
                         t.printStackTrace();
                     }
                 }
             }
         }).start();
     }
-    
+
     public void step () {
         BreakpointException bp = null;
         synchronized ( this ) {
@@ -136,9 +136,9 @@ public class Debugger extends Thread {
             try {
                 performing = true;
                 cpu.step();
-            } catch ( BreakpointException e ) {
+            } catch (BreakpointException e) {
                 bp = e;
-            } catch ( DebugException e ) {
+            } catch (DebugException e) {
                 notifyException( e );
                 if ( e.isFatal() )
                     terminate( e );
@@ -149,11 +149,11 @@ public class Debugger extends Thread {
         synchronized ( whileRunning ) {
             whileRunning.notifyAll();
         }
-        
-        if( bp != null )
+
+        if ( bp != null )
             notifyBreak( bp );
     }
-    
+
     public void cont () {
         synchronized ( this ) {
             if ( !running )
@@ -172,7 +172,7 @@ public class Debugger extends Thread {
     public void pause () {
         boolean f;
         synchronized ( this ) {
-            if ( ( f = running && performing ) )
+            if ( (f = running && performing) )
                 cpu.interrupt();
         }
         if ( f ) {
@@ -185,7 +185,7 @@ public class Debugger extends Thread {
             synchronized ( whileRunning ) {
                 try {
                     whileRunning.wait( 150 );
-                } catch ( InterruptedException e ) {
+                } catch (InterruptedException e) {
                 }
             }
         }
@@ -233,7 +233,7 @@ public class Debugger extends Thread {
                 synchronized ( notRunning ) {
                     try {
                         notRunning.wait();
-                    } catch ( InterruptedException e ) {
+                    } catch (InterruptedException e) {
                         continue main_loop;
                     }
                 }
@@ -242,13 +242,13 @@ public class Debugger extends Thread {
                 cpu.perform();
                 running = false;
                 notifyDie( new EndOfCodeException( 0, cpu.getCurrentInstruction() ) );
-            } catch ( BreakpointException bp ) {
+            } catch (BreakpointException bp) {
                 notifyBreak( bp );
-            } catch ( FatalException e ) {
+            } catch (FatalException e) {
                 notifyException( e );
                 running = false;
                 notifyDie( e );
-            } catch ( DebugException e ) {
+            } catch (DebugException e) {
                 notifyException( e );
                 if ( e.isFatal() )
                     terminate( e );
@@ -263,9 +263,21 @@ public class Debugger extends Thread {
     public String getSourceCode () {
         return String.valueOf( sourceCode );
     }
-    
-    public void registerDebugClient( DebugClient client ) {
-        if( ( client != null ) && ( !clients.contains( client ) ) )
+
+    public void registerDebugClient ( DebugClient client ) {
+        if ( (client != null) && (!clients.contains( client )) )
             clients.add( client );
+    }
+
+    public BfMemory getMemory () {
+        return memory;
+    }
+
+    public DebugProcessor getCpu () {
+        return cpu;
+    }
+
+    public IOBus getBus () {
+        return bus;
     }
 }

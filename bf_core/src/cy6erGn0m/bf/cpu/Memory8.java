@@ -99,7 +99,7 @@ public class Memory8 implements BfMemory {
     public Memory8 ( int baseSize ) {
         nextUnitSize = baseSize;
         units.add( currentUnit = allocNext() );
-        currentOffset = baseSize >> 1;
+//        currentOffset = baseSize >> 1;
     }
 
     public void teardown () {
@@ -196,6 +196,9 @@ public class Memory8 implements BfMemory {
     }
 
     public int[] dump () {
+        // flush cache
+        currentUnit.data[currentOffset] = currentValue;
+
         int size = 0;
         for ( MemoryUnit u : units )
             size += u.size;
