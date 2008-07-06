@@ -43,9 +43,9 @@ import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
-import javax.swing.plaf.basic.BasicTextUI.BasicCaret;
 import javax.swing.table.TableModel;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Caret;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -311,9 +311,16 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
             }
         });
 
-        sourceText.setFont(new java.awt.Font("Monospaced", 0, 12));
-        sourceText.setCaret(new BasicCaret()
-        );
+        sourceText.setEditable(false);
+        sourceText.setFont(new java.awt.Font("Monospaced", 0, 12)); // NOI18N
+        sourceText.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                sourceTextMouseClicked(evt);
+            }
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                sourceTextMouseReleased(evt);
+            }
+        });
         sourceText.addInputMethodListener(new java.awt.event.InputMethodListener() {
             public void caretPositionChanged(java.awt.event.InputMethodEvent evt) {
             }
@@ -562,6 +569,28 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     private void sourceTextInputMethodTextChanged (java.awt.event.InputMethodEvent evt) {//GEN-FIRST:event_sourceTextInputMethodTextChanged
         
     }//GEN-LAST:event_sourceTextInputMethodTextChanged
+
+    private void sourceTextMouseClicked (java.awt.event.MouseEvent evt) {//GEN-FIRST:event_sourceTextMouseClicked
+        final Caret c = sourceText.getCaret();
+        if( c != null ) {
+            if( !c.isVisible() )
+                c.setVisible( true );
+            if( c.isSelectionVisible() )
+                c.setSelectionVisible(  false );
+        }
+    }//GEN-LAST:event_sourceTextMouseClicked
+
+    private void sourceTextMouseReleased (java.awt.event.MouseEvent evt) {//GEN-FIRST:event_sourceTextMouseReleased
+        final Caret c = sourceText.getCaret();
+        if( c != null ) {
+            if( !c.isVisible() )
+                c.setVisible( true );
+            if( c.isSelectionVisible() )
+                c.setSelectionVisible( false );
+            sourceText.setSelectionStart( c.getDot() );
+            sourceText.setSelectionEnd( c.getDot() );
+        }
+    }//GEN-LAST:event_sourceTextMouseReleased
 
 
     public static void main ( final String args[] ) {
