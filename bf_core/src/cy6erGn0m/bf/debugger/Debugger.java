@@ -188,7 +188,7 @@ public class Debugger extends Thread {
             synchronized ( whileRunning ) {
                 try {
                     whileRunning.wait( 150 );
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ignore) {
                 }
             }
         }

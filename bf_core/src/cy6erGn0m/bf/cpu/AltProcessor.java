@@ -5,7 +5,6 @@
 package cy6erGn0m.bf.cpu;
 
 import cy6erGn0m.bf.exception.DebugException;
-import cy6erGn0m.bf.exception.EndOfCodeException;
 import cy6erGn0m.bf.iset.Instruction;
 import java.io.IOException;
 import java.util.logging.Level;
@@ -115,8 +114,8 @@ public class AltProcessor implements BfCpu {
     private final boolean perform100 () {
         int i = 0;
         do {
-        } while ( ++i < 100 && doOne() );
-        return i == 100;
+        } while ( ++i < 1000 && doOne() );
+        return i == 1000;
     }
 
     public void perform () throws DebugException {
