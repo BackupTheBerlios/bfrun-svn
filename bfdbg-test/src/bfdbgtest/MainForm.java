@@ -740,6 +740,8 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
     class MemoryDumpModel implements TableModel {
         private Vector<TableModelListener> listeners = new Vector<TableModelListener>();
 
+        private int[] cache = new int[ getColumnCount() ];
+
         public MemoryDumpModel () {
             model = this;
         }
@@ -773,6 +775,8 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                 return null;
             if( dbg_vm == null )
                 return null;
+            if( dbg_vm.isRunning() && dbg_vm.isPerofrming() )
+                return cache[columnIndex];
             columnIndex -= 5;
             int value = 0;
             BfMemory memory = dbg_vm.getMemory();
@@ -785,6 +789,7 @@ public class MainForm extends javax.swing.JFrame implements DebugClient {
                 memory.backward( columnIndex );
             else if( columnIndex < 0 )
                 memory.forward( -columnIndex );
+            cache[columnIndex + 5] = value;
             return Integer.valueOf( value );
         }
 
